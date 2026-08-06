@@ -1,0 +1,7 @@
+﻿Student ID,Student Name,Class & Sec,Total Fee (INR),Paid Amount (INR),Balance Due (INR),Fee Status,Due Date,Last Payment Mode
+STD-1001,Aarav Sharma,10-A,45000,45000,0,Paid,2026-07-15,UPI
+STD-1002,Ananya Patel,10-A,45000,25000,20000,Pending,2026-08-10,Bank Transfer
+STD-1003,Rohan Verma,10-B,45000,10000,35000,Overdue,2026-06-30,Cash
+STD-1004,Diya Sengupta,9-A,40000,40000,0,Paid,2026-07-01,Credit Card
+STD-1005,Vihaan Reddy,9-A,40000,0,40000,Overdue,2026-06-15,Pending
+STD-1006,Kavya Nair,8-A,38000,38000,0,Paid,2026-07-20,UPI

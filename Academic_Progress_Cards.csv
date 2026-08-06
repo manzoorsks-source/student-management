@@ -1,0 +1,7 @@
+﻿Student ID,Roll No,Student Name,Class,Math (100),Science (100),English (100),Social (100),Computer (100),Total Marks (500),Percentage (%),Grade,Result,Teacher Remarks
+STD-1001,101,Aarav Sharma,10-A,95,88,92,85,98,458,91.6%,A+,PASSED,Exemplary student. Shows great leadership.
+STD-1002,102,Ananya Patel,10-A,82,79,88,90,94,433,86.6%,A,PASSED,Consistent academic performance.
+STD-1003,103,Rohan Verma,10-B,65,70,74,68,80,357,71.4%,B,PASSED,Needs improvement in Mathematics.
+STD-1004,201,Diya Sengupta,9-A,91,94,96,89,97,467,93.4%,A+,PASSED,Outstanding student! Class topper.
+STD-1005,202,Vihaan Reddy,9-A,58,62,68,60,72,320,64.0%,C,PASSED,Requires additional support in Science.
+STD-1006,301,Kavya Nair,8-A,88,90,85,92,90,445,89.0%,A,PASSED,Great teamwork skills.

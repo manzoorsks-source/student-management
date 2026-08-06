@@ -1,0 +1,7 @@
+﻿Student ID,Roll No,School Branch,Student Name,Gender,DOB,Class,Section,Parent / Guardian Name,Relation,Contact Phone,Email,Address
+STD-1001,101,Apex International Academy,Aarav Sharma,Male,2010-05-14,10,A,Rajesh Sharma,Father,+91 98765 43210,rajesh.sharma@example.com,"42 Park View Enclave, Block B"
+STD-1002,102,Apex International Academy,Ananya Patel,Female,2010-08-22,10,A,Suresh Patel,Father,+91 98123 76543,suresh.p@example.com,"15 Sunrise Heights, MG Road"
+STD-1003,103,Apex International Academy,Rohan Verma,Male,2010-12-03,10,B,Meena Verma,Mother,+91 97654 32109,meena.v@example.com,"88 Cyber City Apartments"
+STD-1004,201,St. Jude Public School,Diya Sengupta,Female,2011-03-19,9,A,Amit Sengupta,Father,+91 99887 66554,amit.sengupta@example.com,"12 Lake View Villas"
+STD-1005,202,St. Jude Public School,Vihaan Reddy,Male,2011-07-11,9,A,Kavitha Reddy,Mother,+91 98450 11223,kavitha.r@example.com,"77 Jubilee Hills, Lane 4"
+STD-1006,301,Greenwood High School,Kavya Nair,Female,2012-01-30,8,A,Prakash Nair,Father,+91 97112 33445,prakash.nair@example.com,"304 Palm Grove Residency"
