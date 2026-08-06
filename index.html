@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>St. Venus High School | Student & Fee Management System</title>
+  <title>ABCTESTING HIGH SCHOOL | Student & Fee Management System</title>
   
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -88,7 +88,7 @@
   <div id="app"></div>
 
   <script>
-    // --- ST. VENUS HIGH SCHOOL DATA SYSTEM ---
+    // --- ABCTESTING HIGH SCHOOL DATA SYSTEM ---
 
     const CLASS_LIST = [
       'Nursery', 'LKG', 'UKG', '1st Class', '2nd Class', '3rd Class',
@@ -123,7 +123,7 @@
     };
 
     const PRIMARY_SCHOOL = {
-      name: 'St. Venus High School',
+      name: 'ABCTESTING HIGH SCHOOL',
       code: 'STV-2026',
       affiliation: 'Recognized by Govt & Board of Education',
       location: 'Main Campus'
@@ -1400,7 +1400,7 @@
                 <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 flex items-center justify-center shadow-lg mx-auto border-2 border-amber-400">
                   <span class="text-2xl font-black text-white font-display">SV</span>
                 </div>
-                <h1 class="text-2xl font-extrabold text-slate-900 font-display">ST. VENUS HIGH SCHOOL</h1>
+                <h1 class="text-2xl font-extrabold text-slate-900 font-display">ABCTESTING HIGH SCHOOL</h1>
                 <p class="text-xs text-slate-500 font-medium">Official Portal • Student & Fee Management System</p>
               </div>
 
@@ -1423,7 +1423,7 @@
                   <input type="password" id="loginPassword" required value="admin123" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 font-bold text-sm" />
                 </div>
                 <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-sm transition-all shadow-lg active:scale-95">
-                  Sign In to St. Venus High School Portal
+                  Sign In to ABCTESTING HIGH SCHOOL Portal
                 </button>
               </form>
 
@@ -1756,25 +1756,27 @@
           <tr class="hover:bg-slate-50 transition-colors">
             <td class="py-3 px-4">
               <div class="flex items-center space-x-3">
-                <img src="${s.photoUrl || DEFAULT_AVATAR}" class="w-10 h-10 rounded-xl object-cover border border-slate-300 shadow-2xs" />
+                <img src="${s.photoUrl || DEFAULT_AVATAR}" class="w-10 h-10 rounded-xl object-cover border border-slate-300 shadow-2xs shrink-0" />
                 <div>
-                  <div class="flex items-center space-x-1.5">
-                    <button onclick="openFullProfile('${s.id}')" class="font-bold text-indigo-700 hover:underline text-left text-sm">${s.name}</button>
-                    ${isTransferred ? '<span class="bg-purple-100 text-purple-900 border border-purple-300 text-[10px] px-2 py-0.5 rounded-full font-black">📜 TC Issued</span>' : ''}
-                    ${isAlumni ? '<span class="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] px-2 py-0.5 rounded-full font-black">🎓 Alumni</span>' : ''}
+                  <div class="flex items-center space-x-1.5 flex-wrap gap-y-1">
+                    <button onclick="openFullProfile('${s.id}')" class="font-bold text-indigo-700 hover:underline text-left text-sm whitespace-nowrap">${s.name}</button>
+                    ${isTransferred ? '<span class="bg-purple-100 text-purple-900 border border-purple-300 text-[10px] px-2 py-0.5 rounded-full font-black whitespace-nowrap">📜 TC Issued</span>' : ''}
+                    ${isAlumni ? '<span class="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] px-2 py-0.5 rounded-full font-black whitespace-nowrap">🎓 Alumni</span>' : ''}
                   </div>
-                  <div class="text-[11px] text-slate-400 font-mono">Roll #${s.rollNo} • ID: ${s.id}</div>
+                  <div class="text-[11px] text-slate-400 font-mono whitespace-nowrap">Roll #${s.rollNo} • ID: ${s.id}</div>
                 </div>
               </div>
             </td>
-            <td class="py-3 px-4 font-extrabold text-indigo-900">${s.grade} - Section ${s.section}</td>
+            <td class="py-3 px-4 font-extrabold text-indigo-900 whitespace-nowrap">${s.grade} - Section ${s.section}</td>
             <td class="py-3 px-4"><span class="font-semibold text-slate-800">${s.parentName}</span></td>
-            <td class="py-3 px-4 font-mono font-bold text-slate-900">${s.phone}</td>
-            <td class="py-3 px-4 text-center"><span class="bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-0.5 rounded-full font-bold">#${rankInfo.rank} Rank</span></td>
-            <td class="py-3 px-4 text-right space-x-1.5">
-              <button onclick="openFullProfile('${s.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-xl font-bold shadow-2xs">Full Profile &rarr;</button>
-              <button onclick="openCertificateModal('${s.id}', 'TC')" class="bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-300 px-2.5 py-1.5 rounded-xl font-bold">📜 TC & Certs</button>
-              <button onclick="openEditStudentModal('${s.id}')" class="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 px-2.5 py-1.5 rounded-xl font-bold">✏️ Edit</button>
+            <td class="py-3 px-4 font-mono font-bold text-slate-900 whitespace-nowrap text-left">${s.phone}</td>
+            <td class="py-3 px-4 text-center whitespace-nowrap"><span class="bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-0.5 rounded-full font-bold">#${rankInfo.rank} Rank</span></td>
+            <td class="py-3 px-4 text-right whitespace-nowrap">
+              <div class="inline-flex items-center justify-end space-x-1.5">
+                <button onclick="openFullProfile('${s.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-xl font-bold shadow-2xs text-xs whitespace-nowrap">Full Profile &rarr;</button>
+                <button onclick="openCertificateModal('${s.id}', 'TC')" class="bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-300 px-2.5 py-1.5 rounded-xl font-bold text-xs whitespace-nowrap">📜 TC & Certs</button>
+                <button onclick="openEditStudentModal('${s.id}')" class="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 px-2.5 py-1.5 rounded-xl font-bold text-xs whitespace-nowrap">✏️ Edit</button>
+              </div>
             </td>
           </tr>
         `;
@@ -1803,7 +1805,7 @@
                   </div>
                   <div>
                     <h1 class="text-2xl font-black tracking-tight text-slate-900 font-display flex items-center space-x-2">
-                      <span>ST. VENUS HIGH SCHOOL</span>
+                      <span>ABCTESTING HIGH SCHOOL</span>
                       <span class="text-xs px-2 py-0.5 rounded font-sans font-bold border ${state.currentUser.role === 'admin' ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-emerald-100 text-emerald-800 border-emerald-300'}">
                         ${state.currentUser.role === 'admin' ? 'ADMINISTRATOR' : 'TEACHER PRIVACY MODE'}
                       </span>
@@ -2030,13 +2032,13 @@
                 <div class="overflow-x-auto">
                   <table class="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr class="bg-slate-100 border-b text-slate-600 font-bold uppercase">
-                        <th class="py-3 px-4">Photo & Student Name</th>
-                        <th class="py-3 px-4">Class & Section</th>
-                        <th class="py-3 px-4">Parent Details</th>
-                        <th class="py-3 px-4">Contact Phone</th>
-                        <th class="py-3 px-4 text-center">Class Rank</th>
-                        <th class="py-3 px-4 text-right">Actions</th>
+                      <tr class="bg-slate-100 border-b text-slate-600 font-bold uppercase text-[11px] tracking-wider">
+                        <th class="py-3.5 px-4 min-w-[200px]">Photo & Student Name</th>
+                        <th class="py-3.5 px-4 whitespace-nowrap min-w-[130px]">Class & Section</th>
+                        <th class="py-3.5 px-4 min-w-[180px]">Parent Details</th>
+                        <th class="py-3.5 px-4 whitespace-nowrap text-left min-w-[150px]">Contact Phone</th>
+                        <th class="py-3.5 px-4 whitespace-nowrap text-center min-w-[110px]">Class Rank</th>
+                        <th class="py-3.5 px-4 whitespace-nowrap text-right min-w-[310px]">Actions</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y text-slate-800 font-medium">
@@ -2716,7 +2718,7 @@
               <!-- HEADER TITLE AS IN REFERENCE SCREENSHOT -->
               <div class="text-center font-display">
                 <h1 class="text-3xl font-black text-emerald-950 font-display">Student Report Card</h1>
-                <p class="text-xs font-bold text-emerald-800 uppercase tracking-widest mt-0.5">ST. VENUS HIGH SCHOOL • ACADEMIC PROGRESS RECORD</p>
+                <p class="text-xs font-bold text-emerald-800 uppercase tracking-widest mt-0.5">ABCTESTING HIGH SCHOOL • ACADEMIC PROGRESS RECORD</p>
               </div>
 
               <!-- MULTI-TERM COMPARISON TABLE (EXACT WORD REPORT CARD TABLE MATCHING SCREENSHOT) -->
@@ -3165,7 +3167,7 @@
 
               <!-- RECEIPT HEADER -->
               <div class="text-center font-display border-b-2 border-indigo-900 pb-3 space-y-0.5">
-                <h2 class="text-2xl font-black text-indigo-950">ST. VENUS HIGH SCHOOL</h2>
+                <h2 class="text-2xl font-black text-indigo-950">ABCTESTING HIGH SCHOOL</h2>
                 <p class="text-xs font-bold text-slate-600">Nursery to 10th Class • Affiliated & Recognized School</p>
                 <p class="text-[11px] text-indigo-800 font-bold uppercase tracking-wider">OFFICIAL FEE PAYMENT RECEIPT</p>
               </div>
@@ -3396,7 +3398,7 @@
         `;
       }
 
-      // MODAL 7: ADD STUDENT (OFFICIAL ST. VENUS HIGH SCHOOL PERSONAL INFORMATION FORM)
+      // MODAL 7: ADD STUDENT (OFFICIAL ABCTESTING HIGH SCHOOL PERSONAL INFORMATION FORM)
       if (state.activeModal === 'addStudent') {
         return `
           <div class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
@@ -3407,7 +3409,7 @@
                     <span>+ Add New Student Admission Record</span>
                     <span class="bg-amber-100 text-amber-900 text-xs px-2.5 py-0.5 rounded-full font-bold">Official Form</span>
                   </h3>
-                  <p class="text-xs text-slate-500 font-medium">St. Venus High School • Personal Information Entry Form</p>
+                  <p class="text-xs text-slate-500 font-medium">ABCTESTING HIGH SCHOOL • Personal Information Entry Form</p>
                 </div>
                 <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700">✕</button>
               </div>
@@ -3612,7 +3614,7 @@
         `;
       }
 
-      // MODAL 8: OFFICIAL ST. VENUS HIGH SCHOOL PERSONAL INFORMATION DIARY FORM (EXACT MATCH TO PHYSICAL DIARY PHOTO)
+      // MODAL 8: OFFICIAL ABCTESTING HIGH SCHOOL PERSONAL INFORMATION DIARY FORM (EXACT MATCH TO PHYSICAL DIARY PHOTO)
       if (state.activeModal === 'printAdmission' && state.modalStudent) {
         const st = state.modalStudent;
         return `
@@ -3638,7 +3640,7 @@
                     <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-700 via-rose-600 to-amber-500 flex items-center justify-center text-white font-black text-sm border border-amber-300 shadow-sm">
                       STVHS
                     </div>
-                    <h2 class="text-2xl md:text-3xl font-black tracking-tight text-rose-800 font-display uppercase">ST. VENUS HIGH SCHOOL</h2>
+                    <h2 class="text-2xl md:text-3xl font-black tracking-tight text-rose-800 font-display uppercase">ABCTESTING HIGH SCHOOL</h2>
                   </div>
                   <p class="text-[11px] font-bold text-slate-700">New Ramnagar Colony, Chilkanagar, Uppal - 39, Medchal Dist.</p>
                   <p class="text-[11px] font-bold text-slate-900">Phone : <span class="font-mono text-rose-800">9121833702</span></p>
@@ -3822,7 +3824,7 @@
                   <h3 class="text-xl font-black text-amber-950 font-display flex items-center space-x-2">
                     <span>🎓 Academic Year End & Student Promotion Wizard</span>
                   </h3>
-                  <p class="text-xs text-slate-500 font-medium">St. Venus High School • Automated Year-End Transition System</p>
+                  <p class="text-xs text-slate-500 font-medium">ABCTESTING HIGH SCHOOL • Automated Year-End Transition System</p>
                 </div>
                 <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700 font-bold text-lg">✕</button>
               </div>
@@ -3933,7 +3935,7 @@
                 
                 <!-- HEADER -->
                 <div class="text-center space-y-1 border-b-2 border-indigo-950 pb-4">
-                  <h2 class="text-2xl md:text-3xl font-black tracking-tight text-indigo-950 font-display uppercase">ST. VENUS HIGH SCHOOL</h2>
+                  <h2 class="text-2xl md:text-3xl font-black tracking-tight text-indigo-950 font-display uppercase">ABCTESTING HIGH SCHOOL</h2>
                   <p class="text-xs font-sans font-bold text-slate-700">New Ramnagar Colony, Chilkanagar, Uppal - 39, Medchal Dist. • Phone: 9121833702</p>
                   <div class="mt-2 inline-block bg-indigo-950 text-white font-sans text-xs font-bold px-6 py-1 rounded-full uppercase tracking-widest shadow-sm">
                     ${certType === 'TC' ? 'TRANSFER CERTIFICATE (T.C.)' : certType === 'Bonafide' ? 'BONAFIDE CONDUCT CERTIFICATE' : 'CUMULATIVE ACADEMIC TRANSCRIPT'}
@@ -4005,7 +4007,7 @@
                     <p class="indent-8 text-base">
                       This is to certify that Master / Kum. <strong class="border-b-2 border-indigo-950 px-2 font-black uppercase text-indigo-950">${st.name}</strong> 
                       Son / Daughter of Sri <strong class="border-b border-indigo-950 px-2 font-bold">${st.fatherName || st.parentName}</strong> 
-                      is / was a bonafide student of <strong>ST. VENUS HIGH SCHOOL</strong> studying in Class <strong class="border-b border-indigo-950 px-2 font-bold">${st.grade} Section ${st.section}</strong> 
+                      is / was a bonafide student of <strong>ABCTESTING HIGH SCHOOL</strong> studying in Class <strong class="border-b border-indigo-950 px-2 font-bold">${st.grade} Section ${st.section}</strong> 
                       during the Academic Year <strong>${state.activeAcademicYear}</strong>.
                     </p>
                     <p class="indent-8 text-base">
@@ -4476,7 +4478,7 @@
     }
 
     function sendParentAbsenceAlert(studentName, parentPhone) {
-      alert(`📱 SMS/WhatsApp Alert Sent!\n\nTo Parent of: ${studentName}\nPhone: ${parentPhone}\n\nMessage: "Dear Parent, your child ${studentName} is marked ABSENT today at St. Venus High School. Please contact the school office if you have any questions."`);
+      alert(`📱 SMS/WhatsApp Alert Sent!\n\nTo Parent of: ${studentName}\nPhone: ${parentPhone}\n\nMessage: "Dear Parent, your child ${studentName} is marked ABSENT today at ABCTESTING HIGH SCHOOL. Please contact the school office if you have any questions."`);
     }
 
     function exportAbsenteesToExcel() {
@@ -4499,7 +4501,7 @@
       const ws = XLSX.utils.json_to_sheet(exportData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Absentees_Today');
-      XLSX.writeFile(wb, `St_Venus_School_Absentees_${Date.now().toString().slice(-4)}.xlsx`);
+      XLSX.writeFile(wb, `ABC_TESTING_School_Absentees_${Date.now().toString().slice(-4)}.xlsx`);
     }
 
     function openFullProfile(id) { state.fullProfileStudentId = id; saveState(); }
@@ -4952,7 +4954,7 @@
         });
         const ws = XLSX.utils.json_to_sheet(feeData);
         XLSX.utils.book_append_sheet(wb, ws, 'Fee_Details_Ledger');
-        XLSX.writeFile(wb, `St_Venus_School_Fee_Details_${Date.now().toString().slice(-4)}.xlsx`);
+        XLSX.writeFile(wb, `ABC_TESTING_School_Fee_Details_${Date.now().toString().slice(-4)}.xlsx`);
       } else if (currentTab === 'performance') {
         // EXPORT COMPLETE ACADEMIC MARKS & MULTI-TERM PERFORMANCE
         const marksData = filtered.map((s, idx) => {
@@ -4991,7 +4993,7 @@
         });
         const ws = XLSX.utils.json_to_sheet(marksData);
         XLSX.utils.book_append_sheet(wb, ws, 'Academic_Performance');
-        XLSX.writeFile(wb, `St_Venus_School_Academic_Marks_${Date.now().toString().slice(-4)}.xlsx`);
+        XLSX.writeFile(wb, `ABC_TESTING_School_Academic_Marks_${Date.now().toString().slice(-4)}.xlsx`);
       } else if (currentTab === 'faculty') {
         // EXPORT COMPLETE FACULTY ROSTER & WORKLOADS
         const facultyData = state.teachers.map((t, idx) => ({
@@ -5006,7 +5008,7 @@
         }));
         const ws = XLSX.utils.json_to_sheet(facultyData);
         XLSX.utils.book_append_sheet(wb, ws, 'Faculty_Roster');
-        XLSX.writeFile(wb, `St_Venus_School_Faculty_Roster_${Date.now().toString().slice(-4)}.xlsx`);
+        XLSX.writeFile(wb, `ABC_TESTING_School_Faculty_Roster_${Date.now().toString().slice(-4)}.xlsx`);
       } else if (currentTab === 'attendance') {
         // EXPORT DAILY ATTENDANCE REGISTER
         const attData = filtered.map((s, idx) => ({
@@ -5020,7 +5022,7 @@
         }));
         const ws = XLSX.utils.json_to_sheet(attData);
         XLSX.utils.book_append_sheet(wb, ws, 'Attendance_Register');
-        XLSX.writeFile(wb, `St_Venus_School_Attendance_${Date.now().toString().slice(-4)}.xlsx`);
+        XLSX.writeFile(wb, `ABC_TESTING_School_Attendance_${Date.now().toString().slice(-4)}.xlsx`);
       } else {
         // EXPORT ALL-IN-ONE MASTER SCHOOL WORKBOOK (MULTIPLE SHEETS)
         const studentData = filtered.map((s, idx) => ({
@@ -5068,7 +5070,7 @@
         const ws3 = XLSX.utils.json_to_sheet(facultyData);
         XLSX.utils.book_append_sheet(wb, ws3, 'Faculty_Roster');
 
-        XLSX.writeFile(wb, `St_Venus_School_Master_Workbook_${Date.now().toString().slice(-4)}.xlsx`);
+        XLSX.writeFile(wb, `ABC_TESTING_School_Master_Workbook_${Date.now().toString().slice(-4)}.xlsx`);
       }
     }
 
