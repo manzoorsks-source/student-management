@@ -1,0 +1,24 @@
+# Git Portable Binaries & Archives
+mingit/
+mingit.zip
+*.zip
+*.tar.gz
+*.7z
+
+# Executables & Logs
+*.exe
+server_log.txt
+server_err.txt
+server_output.txt
+
+# Temporary Render & Test Files
+rendered_dom.txt
+rendered_table.txt
+edge_dom.html
+test_*.html
+
+# OS and Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
