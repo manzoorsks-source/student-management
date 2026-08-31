@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "name": "st-venus-school-management",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ]
+}
