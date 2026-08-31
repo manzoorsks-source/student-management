@@ -8,20 +8,22 @@ const path = require('path');
 const { Client } = require('pg');
 
 // Read connection string from argument or environment variable
-const connectionString = process.argv[2] || process.env.AIVEN_DATABASE_URL || process.env.DATABASE_URL;
+let rawConnectionString = process.argv[2] || process.env.AIVEN_DATABASE_URL || process.env.DATABASE_URL;
 
-if (!connectionString) {
+if (!rawConnectionString) {
   console.error('\n❌ ERROR: No PostgreSQL Connection String provided.');
   console.error('Usage: node database/migrate.js "<YOUR_AIVEN_DATABASE_URI>"');
-  console.error('Or set AIVEN_DATABASE_URL in .env file.\n');
   process.exit(1);
 }
+
+// Remove query parameters like ?sslmode=require to allow custom SSL object
+const cleanConnectionString = rawConnectionString.split('?')[0];
 
 async function runMigration() {
   console.log('\n🚀 Connecting to Aiven PostgreSQL Database...');
   
   const client = new Client({
-    connectionString: connectionString,
+    connectionString: cleanConnectionString,
     ssl: {
       rejectUnauthorized: false
     }
@@ -53,7 +55,12 @@ async function runMigration() {
     console.log(`   - 📊 Academic Progress Records: ${academicRes.rows[0].count} rows`);
     console.log(`   - 💳 Fee Payment Records: ${feeRes.rows[0].count} rows`);
 
-    console.log('\n🎉 ALL DATA MIGRATED SUCCESSFULLY TO AIVEN POSTGRESQL!\n');
+    // Fetch sample preview
+    console.log('\n👀 Sample Students in Database:');
+    const sampleRes = await client.query('SELECT student_id, student_name, class, section, contact_phone FROM students LIMIT 3');
+    console.table(sampleRes.rows);
+
+    console.log('🎉 ALL DATA MIGRATED SUCCESSFULLY TO AIVEN POSTGRESQL!\n');
 
   } catch (err) {
     console.error('❌ Migration Error:', err.message);
