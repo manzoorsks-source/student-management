@@ -514,7 +514,7 @@
         recipientCount: 3,
         message: 'Dear Parent, your child is ABSENT today (11-Aug-2026). Kindly submit leave request if unwell. - ST. VENUS HIGH SCHOOL',
         photoUrl: '',
-        status: '🟢 Delivered (3/3 Success)'
+                status: '🟢 Delivered (3/3 Success)'
       },
       {
         id: 'BC-2026-002',
@@ -529,11 +529,12 @@
       }
     ];
 
+    // SHA-256 Cryptographically Hashed Staff Credentials (No Plaintext Passwords Stored)
     const INITIAL_USERS = [
-      { empId: 'EMP-001', fullName: 'Mr. M. A. Manzoor', username: 'correspondent', passwordHash: 'admin123', mobile: '+91 9121833702', email: 'correspondent@stvenushighschool.edu.in', role: 'super_admin', status: 'Active', lastLogin: '2026-08-27 10:00' },
-      { empId: 'EMP-002', fullName: 'Dr. S. K. Rao', username: 'principal', passwordHash: 'principal123', mobile: '+91 98490 20001', email: 'principal@stvenushighschool.edu.in', role: 'principal', status: 'Active', lastLogin: '2026-08-27 09:30' },
-      { empId: 'EMP-003', fullName: 'Mrs. P. Swathi', username: 'admin', passwordHash: 'admin123', mobile: '+91 98490 20002', email: 'admin@stvenushighschool.edu.in', role: 'admin', status: 'Active', lastLogin: '2026-08-27 09:15' },
-      { empId: 'EMP-004', fullName: 'Mr. R. K. Sharma', username: 'accountant', passwordHash: 'fee123', mobile: '+91 98490 20003', email: 'accounts@stvenushighschool.edu.in', role: 'accountant', status: 'Active', lastLogin: '2026-08-27 09:00' }
+      { empId: 'EMP-001', fullName: 'Mr. M. A. Manzoor', username: 'correspondent', passwordHash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', mobile: '+91 9121833702', email: 'correspondent@stvenushighschool.edu.in', role: 'super_admin', status: 'Active', lastLogin: '2026-08-27 10:00' },
+      { empId: 'EMP-002', fullName: 'Dr. S. K. Rao', username: 'principal', passwordHash: '3549f22fb8622a6d216ef2dcd592e04ed1f1e604cef032d7e5c425e8e72a878e', mobile: '+91 98490 20001', email: 'principal@stvenushighschool.edu.in', role: 'principal', status: 'Active', lastLogin: '2026-08-27 09:30' },
+      { empId: 'EMP-003', fullName: 'Mrs. P. Swathi', username: 'admin', passwordHash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', mobile: '+91 98490 20002', email: 'admin@stvenushighschool.edu.in', role: 'admin', status: 'Active', lastLogin: '2026-08-27 09:15' },
+      { empId: 'EMP-004', fullName: 'Mr. R. K. Sharma', username: 'accountant', passwordHash: 'a3bb3e757cdafff78fe3aabe1055ccfdda164e5989eef213a683b5eecb3a0b64', mobile: '+91 98490 20003', email: 'accounts@stvenushighschool.edu.in', role: 'accountant', status: 'Active', lastLogin: '2026-08-27 09:00' }
     ];
 
     const INITIAL_WEBSITE_DATA = {
@@ -582,7 +583,7 @@
       }
     };
 
-    const APP_VERSION = 'stv_v2026_clean_zero_payments_789';
+    const APP_VERSION = 'stv_v2026_secured_auth_v2';
     try {
       if (localStorage.getItem('stv_app_version') !== APP_VERSION) {
         localStorage.clear();
@@ -2357,12 +2358,12 @@
 
                   <div>
                     <label class="block text-slate-700 font-bold mb-1">Username</label>
-                    <input id="loginUsername" required value="correspondent" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold text-xs" />
+                    <input id="loginUsername" required placeholder="Enter username" autocomplete="username" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold text-xs" />
                   </div>
 
                   <div>
                     <label class="block text-slate-700 font-bold mb-1">Password</label>
-                    <input type="password" id="loginPassword" required value="admin123" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold text-xs" />
+                    <input type="password" id="loginPassword" required placeholder="Enter password" autocomplete="current-password" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold text-xs" />
                   </div>
 
                   <button type="submit" class="w-full bg-sky-700 hover:bg-sky-800 text-white font-extrabold py-2.5 rounded-xl text-xs shadow-md active:scale-95 transition-all">
@@ -7732,7 +7733,16 @@
 
     // --- INTERACTION HANDLERS & RBAC GUARD ---
     // --- INTERACTION HANDLERS & RBAC GUARD ---
-    function handleLogin(e) {
+    
+    async function sha256Hex(str) {
+      if (!str) return '';
+      const utf8 = new TextEncoder().encode(str);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', utf8);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function handleLogin(e) {
       if (e) e.preventDefault();
       const uInp = document.getElementById('loginUsername');
       const pInp = document.getElementById('loginPassword');
@@ -7917,12 +7927,12 @@
       if (state.editingUser) {
         state.users = state.users.map(u => {
           if (u.empId === state.editingUser.empId) {
-            return { ...u, fullName, username, passwordHash: password || u.passwordHash, mobile, email, role, status };
+            return { ...u, fullName, username, passwordHash: password ? (await sha256Hex(password)) : u.passwordHash, mobile, email, role, status };
           }
           return u;
         });
       } else {
-        const newUser = { empId, fullName, username, passwordHash: password, mobile, email, role, status, lastLogin: 'Never' };
+        const newUser = { empId, fullName, username, passwordHash: await sha256Hex(password), mobile, email, role, status, lastLogin: 'Never' };
         state.users.push(newUser);
       }
 
