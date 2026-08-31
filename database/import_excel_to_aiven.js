@@ -1,6 +1,6 @@
 /**
  * Import complete student particulars from Excel to Aiven PostgreSQL & CSV
- * Exactly 756 students (excluding duplicate DOUBLE sheet)
+ * Exactly 756 students with Official 11-Month Fee Package & Zero Initial Collections
  */
 
 const fs = require('fs');
@@ -83,21 +83,21 @@ function normalizeGrade(rawClass) {
   return `${rawClass} Class`;
 }
 
-function getMonthlyFee(grade) {
-  if (grade.includes('Nursery')) return 2100;
-  if (grade.includes('LKG')) return 2200;
-  if (grade.includes('UKG')) return 2300;
-  if (grade.includes('1st')) return 2400;
-  if (grade.includes('2nd')) return 2500;
-  if (grade.includes('3rd')) return 2600;
-  if (grade.includes('4th')) return 2700;
-  if (grade.includes('5th')) return 2800;
-  if (grade.includes('6th')) return 3000;
-  if (grade.includes('7th')) return 3200;
-  if (grade.includes('8th')) return 3500;
-  if (grade.includes('9th')) return 3800;
-  if (grade.includes('10th')) return 4300;
-  return 2500;
+function getOfficialClassFee(grade) {
+  if (grade.includes('Nursery')) return { monthly: 2100, exam: 1100 };
+  if (grade.includes('UKG')) return { monthly: 2200, exam: 1100 };
+  if (grade.includes('LKG')) return { monthly: 2300, exam: 1100 };
+  if (grade.includes('1st')) return { monthly: 2400, exam: 1100 };
+  if (grade.includes('2nd')) return { monthly: 2500, exam: 1100 };
+  if (grade.includes('3rd')) return { monthly: 2600, exam: 1100 };
+  if (grade.includes('4th')) return { monthly: 2700, exam: 1100 };
+  if (grade.includes('5th')) return { monthly: 2800, exam: 1100 };
+  if (grade.includes('6th')) return { monthly: 3000, exam: 1200 };
+  if (grade.includes('7th')) return { monthly: 3200, exam: 1200 };
+  if (grade.includes('8th')) return { monthly: 3500, exam: 1200 };
+  if (grade.includes('9th')) return { monthly: 3800, exam: 1200 };
+  if (grade.includes('10th')) return { monthly: 4300, exam: 2500 };
+  return { monthly: 2400, exam: 1100 };
 }
 
 function extractStudentsFromExcel() {
@@ -252,9 +252,11 @@ async function migrateAll() {
     await client.query(schemaSql);
     console.log('✅ Schema initialized successfully.');
 
-    console.log(`\n📥 Inserting ${students.length} students into Aiven PostgreSQL with clean zero fee payments...`);
+    console.log(`\n📥 Inserting ${students.length} students into Aiven PostgreSQL with 11-Month Package & 0 Initial Collections...`);
     
     let count = 0;
+    let totalAnnualSchoolFee = 0;
+
     for (const s of students) {
       const studentQuery = `
         INSERT INTO students (
@@ -297,11 +299,13 @@ async function migrateAll() {
         s.student_id, s.roll_no, s.student_name, `${s.class}-${s.section}`
       ]);
 
-      // Clean Fee Record (0 paid, full balance due)
-      const monthlyRate = getMonthlyFee(s.grade);
-      const totalFee = (monthlyRate * 10) + 2000;
-      const paid = 0;
-      const bal = totalFee;
+      // Official 11-Month Fee Calculation
+      const { monthly, exam } = getOfficialClassFee(s.grade);
+      const totalFee = (monthly * 11) + exam; // 11 Months Tuition + Yearly Exam Fee
+      const paid = 0;                        // 0 paid initially
+      const bal = totalFee;                  // Full balance due
+
+      totalAnnualSchoolFee += totalFee;
 
       await client.query(`
         INSERT INTO fee_payments (
@@ -317,13 +321,14 @@ async function migrateAll() {
     }
 
     console.log(`✅ Successfully imported all ${count} distinct student records!`);
+    console.log(`💰 Total Annual School Fee across all ${count} students: ₹${totalAnnualSchoolFee.toLocaleString()}`);
 
     // CSV sync
     const csvHeader = 'Student ID,Admn No,Roll No,Student Name,Class,Section,Father Name,Mother Name,Contact Phone,WhatsApp No,DOB,Caste & Religion,Sub Caste,Admission Date,Mother Tongue,Aadhar No,PEN No,APAAR ID,School Branch\n';
     const csvRows = students.map(s => `"${s.student_id}","${s.admn_no}","${s.roll_no}","${s.student_name}","${s.class}","${s.section}","${s.father_name}","${s.mother_name}","${s.contact_phone}","${s.whatsapp_no}","${s.dob}","${s.caste_religion}","${s.sub_caste}","${s.admission_date}","${s.mother_tongue}","${s.aadhar_number}","${s.pen_number}","${s.apaar_id}","${s.school_branch}"`).join('\n');
     fs.writeFileSync(path.join(__dirname, '..', 'Students_Master_Data.csv'), csvHeader + csvRows);
 
-    console.log('\n🎉 ALL 756 DISTINCT STUDENT RECORDS SEEDED IN AIVEN POSTGRESQL!\n');
+    console.log('\n🎉 ALL 756 DISTINCT STUDENT RECORDS SEEDED IN AIVEN POSTGRESQL WITH OFFICIAL 11-MONTH FEE PACKAGES!\n');
 
   } catch (err) {
     console.error('❌ Migration Error:', err);
