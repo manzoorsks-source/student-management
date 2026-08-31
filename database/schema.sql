@@ -10,16 +10,30 @@ DROP TABLE IF EXISTS students CASCADE;
 -- 1. Students Master Table
 CREATE TABLE students (
     student_id VARCHAR(50) PRIMARY KEY,
-    roll_no INT NOT NULL,
-    school_branch VARCHAR(255) NOT NULL,
+    admn_no VARCHAR(50),
+    roll_no INT,
     student_name VARCHAR(255) NOT NULL,
-    gender VARCHAR(20) NOT NULL,
-    dob DATE NOT NULL,
+    school_branch VARCHAR(255) DEFAULT 'ST. VENUS HIGH SCHOOL',
     class VARCHAR(20) NOT NULL,
-    section VARCHAR(10) NOT NULL,
-    parent_name VARCHAR(255) NOT NULL,
-    relation VARCHAR(50) NOT NULL,
-    contact_phone VARCHAR(50) NOT NULL,
+    section VARCHAR(10) NOT NULL DEFAULT 'A',
+    academic_year VARCHAR(20) DEFAULT '2026-2027',
+    gender VARCHAR(20) DEFAULT 'Not Specified',
+    dob VARCHAR(50),
+    caste_religion VARCHAR(100),
+    sub_caste VARCHAR(100),
+    admission_date VARCHAR(50),
+    mother_tongue VARCHAR(50),
+    aadhar_number VARCHAR(50),
+    pen_number VARCHAR(50),
+    apaar_id VARCHAR(50),
+    parent_name VARCHAR(255),
+    father_name VARCHAR(255),
+    mother_name VARCHAR(255),
+    relation VARCHAR(50) DEFAULT 'Father',
+    contact_phone VARCHAR(50),
+    father_mobile VARCHAR(50),
+    mother_mobile VARCHAR(50),
+    whatsapp_no VARCHAR(50),
     email VARCHAR(255),
     address TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -30,7 +44,7 @@ CREATE TABLE students (
 CREATE TABLE academic_progress (
     id SERIAL PRIMARY KEY,
     student_id VARCHAR(50) REFERENCES students(student_id) ON DELETE CASCADE,
-    roll_no INT NOT NULL,
+    roll_no INT,
     student_name VARCHAR(255) NOT NULL,
     class_section VARCHAR(20) NOT NULL,
     math_marks NUMERIC(5,2) DEFAULT 0,
@@ -65,6 +79,7 @@ CREATE TABLE fee_payments (
 -- Indexes for high performance querying
 CREATE INDEX idx_students_class_section ON students(class, section);
 CREATE INDEX idx_students_name ON students(student_name);
+CREATE INDEX idx_students_admn ON students(admn_no);
 CREATE INDEX idx_academic_student_id ON academic_progress(student_id);
 CREATE INDEX idx_fees_student_id ON fee_payments(student_id);
 CREATE INDEX idx_fees_status ON fee_payments(fee_status);
