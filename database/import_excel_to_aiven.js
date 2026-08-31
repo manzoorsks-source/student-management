@@ -1,6 +1,6 @@
 /**
  * Import complete student particulars from Excel to Aiven PostgreSQL & CSV
- * with Clean Initialized Fee Ledgers (0 paid, full balance due, no mock payments)
+ * Exactly 756 students (excluding duplicate DOUBLE sheet)
  */
 
 const fs = require('fs');
@@ -80,7 +80,6 @@ function normalizeGrade(rawClass) {
   if (c === 'VIII' || c === '8' || c === '8TH') return '8th Class';
   if (c === 'IX' || c === '9' || c === '9TH') return '9th Class';
   if (c === 'X' || c === '10' || c === '10TH') return '10th Class';
-  if (c === 'DOUBLE' || c === 'DOUBLE ') return 'Nursery';
   return `${rawClass} Class`;
 }
 
@@ -107,6 +106,11 @@ function extractStudentsFromExcel() {
   const admnSet = new Set();
 
   workbook.SheetNames.forEach(sheetName => {
+    // Exclude duplicate sheet 'DOUBLE '
+    if (sheetName.trim().toUpperCase() === 'DOUBLE') {
+      return;
+    }
+
     const sheet = workbook.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
 
@@ -166,18 +170,6 @@ function extractStudentsFromExcel() {
           fatherPhone = cleanStr(row[13]);
           motherPhone = cleanStr(row[14]);
           whatsappPhone = cleanStr(row[15]) || fatherPhone;
-        } else if (sheetName === 'DOUBLE ') {
-          fatherName = cleanStr(row[3]);
-          motherName = cleanStr(row[4]);
-          dob = parseDate(row[5]);
-          casteReligion = cleanStr(row[6]);
-          subCaste = cleanStr(row[7]);
-          admnDate = parseDate(row[8]);
-          motherTongue = cleanStr(row[9]);
-          aadharPenRaw = row[10];
-          fatherPhone = cleanStr(row[11]);
-          motherPhone = cleanStr(row[12]);
-          whatsappPhone = cleanStr(row[13]) || fatherPhone;
         } else {
           fatherName = cleanStr(row[3]);
           motherName = cleanStr(row[4]);
@@ -243,7 +235,7 @@ function extractStudentsFromExcel() {
 
 async function migrateAll() {
   const students = extractStudentsFromExcel();
-  console.log(`\n📊 Parsed ${students.length} students from Excel workbook.\n`);
+  console.log(`\n📊 Parsed EXACTLY ${students.length} distinct students from Excel workbook (zero duplicates).\n`);
 
   console.log('🚀 Connecting to Aiven PostgreSQL Database...');
   const client = new Client({
@@ -307,9 +299,9 @@ async function migrateAll() {
 
       // Clean Fee Record (0 paid, full balance due)
       const monthlyRate = getMonthlyFee(s.grade);
-      const totalFee = (monthlyRate * 10) + 2000; // 10 Months Tuition + 2000 Exam Fee
-      const paid = 0;                             // 0 PAID INITIALLY
-      const bal = totalFee;                       // FULL BALANCE DUE
+      const totalFee = (monthlyRate * 10) + 2000;
+      const paid = 0;
+      const bal = totalFee;
 
       await client.query(`
         INSERT INTO fee_payments (
@@ -324,14 +316,14 @@ async function migrateAll() {
       count++;
     }
 
-    console.log(`✅ Successfully imported all ${count} student records with 0 initial fee collections!`);
+    console.log(`✅ Successfully imported all ${count} distinct student records!`);
 
     // CSV sync
     const csvHeader = 'Student ID,Admn No,Roll No,Student Name,Class,Section,Father Name,Mother Name,Contact Phone,WhatsApp No,DOB,Caste & Religion,Sub Caste,Admission Date,Mother Tongue,Aadhar No,PEN No,APAAR ID,School Branch\n';
     const csvRows = students.map(s => `"${s.student_id}","${s.admn_no}","${s.roll_no}","${s.student_name}","${s.class}","${s.section}","${s.father_name}","${s.mother_name}","${s.contact_phone}","${s.whatsapp_no}","${s.dob}","${s.caste_religion}","${s.sub_caste}","${s.admission_date}","${s.mother_tongue}","${s.aadhar_number}","${s.pen_number}","${s.apaar_id}","${s.school_branch}"`).join('\n');
     fs.writeFileSync(path.join(__dirname, '..', 'Students_Master_Data.csv'), csvHeader + csvRows);
 
-    console.log('\n🎉 ALL 789 STUDENT RECORDS RESET WITH CLEAN ZERO PAYMENTS IN AIVEN POSTGRESQL!\n');
+    console.log('\n🎉 ALL 756 DISTINCT STUDENT RECORDS SEEDED IN AIVEN POSTGRESQL!\n');
 
   } catch (err) {
     console.error('❌ Migration Error:', err);

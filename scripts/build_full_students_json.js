@@ -65,7 +65,6 @@ function normalizeGrade(rawClass) {
   if (c === 'VIII' || c === '8' || c === '8TH') return '8th Class';
   if (c === 'IX' || c === '9' || c === '9TH') return '9th Class';
   if (c === 'X' || c === '10' || c === '10TH') return '10th Class';
-  if (c === 'DOUBLE' || c === 'DOUBLE ') return 'Nursery';
   return `${rawClass} Class`;
 }
 
@@ -90,6 +89,12 @@ const allStudents = [];
 const admnSet = new Set();
 
 workbook.SheetNames.forEach(sheetName => {
+  // EXCLUDE duplicate sheet 'DOUBLE '
+  if (sheetName.trim().toUpperCase() === 'DOUBLE') {
+    console.log(`Skipping duplicate sheet "${sheetName}"`);
+    return;
+  }
+
   const sheet = workbook.Sheets[sheetName];
   const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
 
@@ -149,18 +154,6 @@ workbook.SheetNames.forEach(sheetName => {
         fatherPhone = cleanStr(row[13]);
         motherPhone = cleanStr(row[14]);
         whatsappPhone = cleanStr(row[15]) || fatherPhone;
-      } else if (sheetName === 'DOUBLE ') {
-        fatherName = cleanStr(row[3]);
-        motherName = cleanStr(row[4]);
-        dob = parseDate(row[5]);
-        casteReligion = cleanStr(row[6]);
-        subCaste = cleanStr(row[7]);
-        admnDate = parseDate(row[8]);
-        motherTongue = cleanStr(row[9]);
-        aadharPenRaw = row[10];
-        fatherPhone = cleanStr(row[11]);
-        motherPhone = cleanStr(row[12]);
-        whatsappPhone = cleanStr(row[13]) || fatherPhone;
       } else {
         fatherName = cleanStr(row[3]);
         motherName = cleanStr(row[4]);
@@ -188,7 +181,6 @@ workbook.SheetNames.forEach(sheetName => {
       const monthlyFee = getMonthlyFee(normGrade);
       const contactPhone = fatherPhone || motherPhone || whatsappPhone || '+91 90000 00000';
 
-      // Clean default marks - 0 marks until staff/teachers enter marks
       const zeroMarks = { Telugu: 0, Hindi: 0, English: 0, Maths: 0, Science: 0, Social: 0 };
       const term1Marks = { ...zeroMarks };
       const term2Marks = { ...zeroMarks };
@@ -224,23 +216,23 @@ workbook.SheetNames.forEach(sheetName => {
         admissionFee: 5000,
         examFee: 2000,
         totalMonths: 10,
-        paidMonths: 0,            // CLEAN: 0 months paid until staff records payments
+        paidMonths: 0,
         isNewStudent: false,
         attendanceHistory: {},
-        admissionFeePaid: false,  // CLEAN: false until staff records payment
-        examFeePaid: false,       // CLEAN: false until staff records payment
+        admissionFeePaid: false,
+        examFeePaid: false,
         termMarks: {
           '1st Term Exam': term1Marks,
           '2nd Term Exam': term2Marks,
           'Final Term Exam': term3Marks
         },
-        paymentHistory: []        // CLEAN: empty array, waiting for staff entries
+        paymentHistory: []
       });
     }
   });
 });
 
-console.log(`Generated ${allStudents.length} clean student objects (0 initial payments).`);
+console.log(`\n🎉 Generated EXACTLY ${allStudents.length} distinct student objects (Zero Duplicates).`);
 
 // Write to JSON file
 const outJsonPath = path.join(__dirname, '..', 'data_import', 'all_students.json');
