@@ -183,12 +183,12 @@
       { code: 'SA2', name: 'SA2 – Summative Assessment 2', maxMarks: 100, weightage: 30 }
     ];
 
-    const DEFAULT_CLASS_SUBJECTS = {
+        const DEFAULT_CLASS_SUBJECTS = {
       'Nursery': [
         { name: 'Language & Orals', shortName: 'Lang', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'General English / Oral', shortName: 'Eng', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Rhymes / Recitation', shortName: 'Rhymes', maxMarks: 100, passMarks: 35, type: 'Oral' },
-        { name: 'Drawing & Coloring', shortName: 'Drawing', maxMarks: 100, passMarks: 35, type: 'Activity' }
+        { name: 'Rhymes / Recitation', shortName: 'Rhy', maxMarks: 100, passMarks: 35, type: 'Core' },
+        { name: 'Drawing & Coloring', shortName: 'Drw', maxMarks: 100, passMarks: 35, type: 'Activity' }
       ],
       'LKG': [
         { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
@@ -282,9 +282,7 @@
         { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'Physical Science', shortName: 'P.S', maxMarks: 50, passMarks: 18, type: 'Core' },
         { name: 'Bio Science', shortName: 'B.S', maxMarks: 50, passMarks: 18, type: 'Core' },
-        { name: 'Social', shortName: 'SOC', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'General English', shortName: 'GenEng', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Drawing', shortName: 'DRW', maxMarks: 100, passMarks: 35, type: 'Activity' }
+        { name: 'Social', shortName: 'SOC', maxMarks: 100, passMarks: 35, type: 'Core' }
       ],
       '9th Class': [
         { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
@@ -293,9 +291,7 @@
         { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'Physical Science', shortName: 'P.S', maxMarks: 50, passMarks: 18, type: 'Core' },
         { name: 'Bio Science', shortName: 'B.S', maxMarks: 50, passMarks: 18, type: 'Core' },
-        { name: 'Social', shortName: 'SOC', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'General English', shortName: 'GenEng', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Drawing', shortName: 'DRW', maxMarks: 100, passMarks: 35, type: 'Activity' }
+        { name: 'Social', shortName: 'SOC', maxMarks: 100, passMarks: 35, type: 'Core' }
       ],
       '10th Class': [
         { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
@@ -304,9 +300,7 @@
         { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'Physical Science', shortName: 'P.S', maxMarks: 50, passMarks: 18, type: 'Core' },
         { name: 'Bio Science', shortName: 'B.S', maxMarks: 50, passMarks: 18, type: 'Core' },
-        { name: 'Social', shortName: 'SOC', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'General English', shortName: 'GenEng', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Drawing', shortName: 'DRW', maxMarks: 100, passMarks: 35, type: 'Activity' }
+        { name: 'Social', shortName: 'SOC', maxMarks: 100, passMarks: 35, type: 'Core' }
       ]
     };
 
@@ -595,7 +589,7 @@
       }
     };
 
-    const APP_VERSION = 'stv_v2026_progress_card_dynamic_v1';
+    const APP_VERSION = 'stv_v2026_highschool_subjects_exact_v1';
     try {
       if (localStorage.getItem('stv_app_version') !== APP_VERSION) {
         localStorage.clear();
@@ -650,7 +644,7 @@
       ]),
       classFeeStructure: safeLoadJson('stv_fee_structure_v1', DEFAULT_CLASS_FEE_STRUCTURE),
       lastReceiptSequence: safeLoadJson('stv_receipt_seq_v1', 0),
-      classSubjectsMap: safeLoadJson('stv_class_subjects_v100', DEFAULT_CLASS_SUBJECTS),
+      classSubjectsMap: safeLoadJson('stv_class_subjects_v101', DEFAULT_CLASS_SUBJECTS),
       examsList: safeLoadJson('stv_exams_v100', DEFAULT_EXAMS),
       gradeRules: safeLoadJson('stv_grade_rules_v1', DEFAULT_GRADE_RULES),
       examStatuses: safeLoadJson('stv_exam_statuses_v1', {}),
@@ -685,7 +679,7 @@
       localStorage.setItem('stv_academic_history_v11', JSON.stringify(state.academicHistory));
       localStorage.setItem('stv_students_v11', JSON.stringify(state.students));
       localStorage.setItem('stv_fee_structure_v1', JSON.stringify(state.classFeeStructure));
-      localStorage.setItem('stv_class_subjects_v100', JSON.stringify(state.classSubjectsMap));
+      localStorage.setItem('stv_class_subjects_v101', JSON.stringify(state.classSubjectsMap));
       localStorage.setItem('stv_exams_v100', JSON.stringify(state.examsList));
       localStorage.setItem('stv_grade_rules_v1', JSON.stringify(state.gradeRules));
       localStorage.setItem('stv_exam_statuses_v1', JSON.stringify(state.examStatuses));
@@ -4501,7 +4495,7 @@
         const rawClassSubjects = getClassSubjectsList(s.grade);
         const attStats = getStudentAttendanceStats(s);
 
-        // Helper to format subjects for card view
+                // Helper to format subjects for card view (distinct Physical Science & Bio Science)
         const isHighSchool = s.grade.includes('8') || s.grade.includes('9') || s.grade.includes('10');
         const subjectsForCard = rawClassSubjects.map((sub, i) => {
           let displayName = sub;
@@ -4510,10 +4504,16 @@
           else if (sub === 'English') displayName = '3rd Lang. (English)';
           else if (sub === 'Mathematics') displayName = 'MATHEMATICS';
           else if (sub === 'Science' || sub === 'EVS') displayName = 'G. SCIENCE / EVS';
-          else if (sub === 'Physical Science') displayName = 'P.S (Physical Science)';
-          else if (sub === 'Bio Science') displayName = 'B.S (Biological Science)';
+          else if (sub === 'Physical Science') displayName = 'Physical Science (P.S)';
+          else if (sub === 'Bio Science') displayName = 'Biological Science (B.S)';
           else if (sub === 'Social') displayName = 'SOCIAL STUDIES';
-          return { key: sub, label: displayName };
+          return { 
+            key: sub, 
+            label: displayName,
+            isPS: sub === 'Physical Science',
+            isBS: sub === 'Bio Science',
+            maxMarks: (sub === 'Physical Science' || sub === 'Bio Science') ? 50 : 100
+          };
         });
 
         // Compute Marks Data for all 6 exams
