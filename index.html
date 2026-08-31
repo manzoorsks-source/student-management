@@ -8348,6 +8348,7 @@
     }
 
     
+    
     // --- SINGLE-TAB WHATSAPP ARCHITECTURE ENGINE (ZERO EXTRA BROWSER TABS) ---
     function openSingleWhatsAppTab(phone, message) {
       if (!phone) {
@@ -8370,6 +8371,80 @@
       openSingleWhatsAppTab(phone, message);
     }
 
+    function getBroadcastRecipientList() {
+      const activeStudents = state.students.filter(s => s.status !== 'Alumni' && s.status !== 'Transferred');
+      const todayIso = getTodayIsoDate();
+      const targetAudience = state.broadcastAudience || 'all';
+
+      if (targetAudience === 'absentees_today') {
+        return activeStudents.filter(s => {
+          const h = s.attendanceHistory || {};
+          const todayRec = h[todayIso];
+          return (todayRec && todayRec.status === 'Absent') || state.attendanceMap[s.id] === 'Absent';
+        });
+      } else if (targetAudience === 'fee_defaulters') {
+        return activeStudents.filter(s => getStudentFeeTotals(s).balanceDue > 0);
+      } else if (targetAudience.startsWith('grade_')) {
+        const cls = targetAudience.replace('grade_', '');
+        return activeStudents.filter(s => s.grade.toLowerCase().includes(cls.toLowerCase()));
+      }
+      return activeStudents;
+    }
+
+    function buildPersonalizedBroadcastMessage(student) {
+      const defaultMsgText = state.broadcastMessageText || 'Dear Parent, this is an official notice from ST. VENUS HIGH SCHOOL.';
+      const attachedPhoto = state.broadcastAttachedPhoto || '';
+      
+      const personalizedMsg = defaultMsgText
+        .replace(/{StudentName}/g, student.name)
+        .replace(/{Grade}/g, student.grade)
+        .replace(/{Section}/g, student.section)
+        .replace(/{Date}/g, getTodayIsoDate())
+        .replace(/{BalanceDue}/g, getStudentFeeTotals(student).balanceDue.toLocaleString())
+        .replace(/{Reason}/g, 'Daily Absence Notice');
+      
+      return personalizedMsg + (attachedPhoto ? '\n\nEvent Photo: ' + attachedPhoto : '');
+    }
+
+    function openBroadcastWhatsAppRow(idx) {
+      const list = getBroadcastRecipientList();
+      const s = list[idx];
+      if (!s) {
+        alert('⚠️ Parent record not found at index ' + idx);
+        return;
+      }
+      const rawPhone = (s.phone || '9121833702').replace(/\D/g, '');
+      const msg = buildPersonalizedBroadcastMessage(s);
+      openSingleWhatsAppTab(rawPhone, msg);
+    }
+
+    function startSequentialWhatsAppDispatch(startIndex = 0) {
+      const list = getBroadcastRecipientList();
+      if (!list || list.length === 0) {
+        alert('⚠️ No recipient parents found matching the active audience filter.');
+        return;
+      }
+
+      const queue = list.map(s => {
+        const rawPhone = (s.phone || '9121833702').replace(/\D/g, '');
+        const msg = buildPersonalizedBroadcastMessage(s);
+        return {
+          phone: rawPhone,
+          msg: msg,
+          name: s.parentName || s.name,
+          parentName: s.parentName || 'Parent',
+          studentName: s.name,
+          grade: s.grade + ' ' + s.section,
+          isSent: false
+        };
+      });
+
+      state.modalWaQueue = queue;
+      state.modalWaQueueIdx = startIndex;
+      state.activeModal = 'waDispatchConsole';
+      render();
+    }
+
     function dispatchCurrentQueueItemAndAdvance() {
       const queue = state.modalWaQueue;
       if (!queue || queue.length === 0) return;
@@ -8385,6 +8460,17 @@
       } else {
         state.modalWaQueueIdx = idx + 1;
         render();
+      }
+    }
+
+    function copyCurrentQueueMessage() {
+      const queue = state.modalWaQueue;
+      if (!queue || queue.length === 0) return;
+      const idx = state.modalWaQueueIdx || 0;
+      const item = queue[idx];
+      if (item && item.msg) {
+        navigator.clipboard.writeText(item.msg);
+        alert('📋 Personalized message copied to clipboard!');
       }
     }
 
@@ -8460,37 +8546,6 @@
       const ultraEl = document.getElementById('ultraMsgFields');
       if (metaEl) metaEl.classList.toggle('hidden', mode !== 'meta_official_api');
       if (ultraEl) ultraEl.classList.toggle('hidden', mode !== 'ultramsg_gateway');
-    }
-
-    function startSequentialWhatsAppDispatch(startIndex = 0) {
-      const rows = document.querySelectorAll('#broadcast-recipient-table-body tr');
-      if (!rows || rows.length === 0) {
-        alert('No target recipient parents found in active list!');
-        return;
-      }
-
-      const queue = [];
-      rows.forEach(r => {
-        const btn = r.querySelector('button[data-wa-phone]');
-        if (btn) {
-          queue.push({
-            phone: btn.getAttribute('data-wa-phone'),
-            msg: btn.getAttribute('data-wa-msg'),
-            name: btn.getAttribute('data-wa-name'),
-            studentName: btn.getAttribute('data-wa-name')
-          });
-        }
-      });
-
-      if (queue.length === 0) {
-        alert('No recipient phone numbers available for dispatch.');
-        return;
-      }
-
-      state.modalWaQueue = queue;
-      state.modalWaQueueIdx = startIndex;
-      state.activeModal = 'waDispatchConsole';
-      render();
     }
 
     function getTimetableOptions() {
