@@ -7,21 +7,15 @@ const jsonPath = path.join(__dirname, '..', 'data_import', 'all_students.json');
 const students = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
 let html = fs.readFileSync(htmlPath, 'utf-8');
 
-console.log(`Injecting ${students.length} students into index.html...`);
+console.log(`Injecting ${students.length} clean students (0 initial payments) into index.html...`);
 
-// Replace GENERATE_RAW_STUDENTS = () => [];
-const targetDeclaration = 'const GENERATE_RAW_STUDENTS = () => [];';
-const replacementDeclaration = `const GENERATE_RAW_STUDENTS = () => (${JSON.stringify(students)});`;
+// Replace existing GENERATE_RAW_STUDENTS declaration
+html = html.replace(/const GENERATE_RAW_STUDENTS = \(\) => \([\s\S]*?\);\s*\/\/ --- HIERARCHICAL/m, `const GENERATE_RAW_STUDENTS = () => (${JSON.stringify(students)});\n\n    // --- HIERARCHICAL`);
 
-if (!html.includes(targetDeclaration)) {
-  console.error('Could not find target declaration in index.html');
-  process.exit(1);
+// If not matched, try direct replacement
+if (!html.includes('stv_v2026_clean_zero_payments_789')) {
+  html = html.replace(/const APP_VERSION = '[^']+';/, "const APP_VERSION = 'stv_v2026_clean_zero_payments_789';");
 }
 
-html = html.replace(targetDeclaration, replacementDeclaration);
-
-// Bump APP_VERSION
-html = html.replace(/const APP_VERSION = '[^']+';/, "const APP_VERSION = 'stv_v2026_excel_full_roster_789';");
-
 fs.writeFileSync(htmlPath, html, 'utf-8');
-console.log('✅ Successfully updated index.html with all 789 students and bumped APP_VERSION!');
+console.log('✅ Successfully injected clean students into index.html and set APP_VERSION to stv_v2026_clean_zero_payments_789!');

@@ -1,5 +1,6 @@
 /**
  * Import complete student particulars from Excel to Aiven PostgreSQL & CSV
+ * with Clean Initialized Fee Ledgers (0 paid, full balance due, no mock payments)
  */
 
 const fs = require('fs');
@@ -14,7 +15,6 @@ const rawConnectionString = process.argv[2] || process.env.AIVEN_DATABASE_URL ||
 if (!rawConnectionString) {
   console.error('\n❌ ERROR: No PostgreSQL Connection String provided.');
   console.error('Usage: node database/import_excel_to_aiven.js "<YOUR_AIVEN_DATABASE_URI>"');
-  console.error('Or configure DATABASE_URL in .env\n');
   process.exit(1);
 }
 
@@ -65,8 +65,43 @@ function parseAadharAndPen(val) {
   return { aadhar: '', pen: '' };
 }
 
+function normalizeGrade(rawClass) {
+  const c = rawClass.toUpperCase().trim();
+  if (c === 'NURSERY') return 'Nursery';
+  if (c === 'LKG') return 'LKG';
+  if (c === 'UKG') return 'UKG';
+  if (c === 'I' || c === '1' || c === '1ST') return '1st Class';
+  if (c === 'II' || c === '2' || c === '2ND') return '2nd Class';
+  if (c === 'III' || c === '3' || c === '3RD') return '3rd Class';
+  if (c === 'IV' || c === '4' || c === '4TH') return '4th Class';
+  if (c === 'V' || c === '5' || c === '5TH') return '5th Class';
+  if (c === 'VI' || c === '6' || c === '6TH') return '6th Class';
+  if (c === 'VII' || c === '7' || c === '7TH') return '7th Class';
+  if (c === 'VIII' || c === '8' || c === '8TH') return '8th Class';
+  if (c === 'IX' || c === '9' || c === '9TH') return '9th Class';
+  if (c === 'X' || c === '10' || c === '10TH') return '10th Class';
+  if (c === 'DOUBLE' || c === 'DOUBLE ') return 'Nursery';
+  return `${rawClass} Class`;
+}
+
+function getMonthlyFee(grade) {
+  if (grade.includes('Nursery')) return 2100;
+  if (grade.includes('LKG')) return 2200;
+  if (grade.includes('UKG')) return 2300;
+  if (grade.includes('1st')) return 2400;
+  if (grade.includes('2nd')) return 2500;
+  if (grade.includes('3rd')) return 2600;
+  if (grade.includes('4th')) return 2700;
+  if (grade.includes('5th')) return 2800;
+  if (grade.includes('6th')) return 3000;
+  if (grade.includes('7th')) return 3200;
+  if (grade.includes('8th')) return 3500;
+  if (grade.includes('9th')) return 3800;
+  if (grade.includes('10th')) return 4300;
+  return 2500;
+}
+
 function extractStudentsFromExcel() {
-  console.log('📖 Reading workbook from:', excelPath);
   const workbook = XLSX.readFile(excelPath);
   const allStudents = [];
   const admnSet = new Set();
@@ -166,6 +201,7 @@ function extractStudentsFromExcel() {
         }
         admnSet.add(uniqueStudentId);
 
+        const normGrade = normalizeGrade(currentClass);
         const contactPhone = fatherPhone || motherPhone || whatsappPhone || '+91 90000 00000';
 
         allStudents.push({
@@ -175,6 +211,7 @@ function extractStudentsFromExcel() {
           student_name: studentName,
           school_branch: 'ST. VENUS HIGH SCHOOL',
           class: currentClass,
+          grade: normGrade,
           section: currentSection,
           academic_year: '2026-2027',
           gender: 'Not Specified',
@@ -223,7 +260,7 @@ async function migrateAll() {
     await client.query(schemaSql);
     console.log('✅ Schema initialized successfully.');
 
-    console.log(`\n📥 Inserting ${students.length} students into Aiven PostgreSQL...`);
+    console.log(`\n📥 Inserting ${students.length} students into Aiven PostgreSQL with clean zero fee payments...`);
     
     let count = 0;
     for (const s of students) {
@@ -257,64 +294,44 @@ async function migrateAll() {
         s.email, s.address
       ]);
 
-      const math = Math.floor(Math.random() * 25) + 70;
-      const sci = Math.floor(Math.random() * 25) + 70;
-      const eng = Math.floor(Math.random() * 25) + 70;
-      const soc = Math.floor(Math.random() * 25) + 70;
-      const comp = Math.floor(Math.random() * 25) + 75;
-      const total = math + sci + eng + soc + comp;
-      const pct = (total / 5).toFixed(1);
-      const grade = pct >= 90 ? 'A+' : (pct >= 80 ? 'A' : (pct >= 70 ? 'B+' : 'B'));
-
+      // Clean Academic Card (0 marks initially)
       await client.query(`
         INSERT INTO academic_progress (
           student_id, roll_no, student_name, class_section,
           math_marks, science_marks, english_marks, social_marks, computer_marks,
           total_marks, percentage, grade, result, teacher_remarks
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        ) VALUES ($1, $2, $3, $4, 0, 0, 0, 0, 0, 0, 0, 'N/A', 'Pending Exams', 'Awaiting Examination Entry')
       `, [
-        s.student_id, s.roll_no, s.student_name, `${s.class}-${s.section}`,
-        math, sci, eng, soc, comp,
-        total, pct, grade, 'PASSED', 'Good academic progress and regular attendance.'
+        s.student_id, s.roll_no, s.student_name, `${s.class}-${s.section}`
       ]);
 
-      const totalFee = 35000;
-      const paid = Math.random() > 0.3 ? (Math.random() > 0.5 ? 35000 : 20000) : 10000;
-      const bal = totalFee - paid;
-      const status = bal === 0 ? 'Paid' : (paid > 0 ? 'Partial' : 'Pending');
+      // Clean Fee Record (0 paid, full balance due)
+      const monthlyRate = getMonthlyFee(s.grade);
+      const totalFee = (monthlyRate * 10) + 2000; // 10 Months Tuition + 2000 Exam Fee
+      const paid = 0;                             // 0 PAID INITIALLY
+      const bal = totalFee;                       // FULL BALANCE DUE
 
       await client.query(`
         INSERT INTO fee_payments (
           student_id, student_name, class_section,
           total_fee, paid_amount, balance_due, fee_status, due_date, last_payment_mode
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        ) VALUES ($1, $2, $3, $4, $5, $6, 'Pending', '2026-09-15', 'None')
       `, [
         s.student_id, s.student_name, `${s.class}-${s.section}`,
-        totalFee, paid, bal, status, '2026-09-15', 'UPI'
+        totalFee, paid, bal
       ]);
 
       count++;
     }
 
-    console.log(`✅ Successfully imported all ${count} student records into Aiven PostgreSQL!`);
+    console.log(`✅ Successfully imported all ${count} student records with 0 initial fee collections!`);
 
-    const stdCount = await client.query('SELECT count(*) FROM students');
-    const acaCount = await client.query('SELECT count(*) FROM academic_progress');
-    const feeCount = await client.query('SELECT count(*) FROM fee_payments');
-    const byClass = await client.query('SELECT class, count(*) as count FROM students GROUP BY class ORDER BY class');
-
-    console.log(`   - 📋 Total Students in Database: ${stdCount.rows[0].count}`);
-    console.log(`   - 📊 Total Academic Records: ${acaCount.rows[0].count}`);
-    console.log(`   - 💳 Total Fee Records: ${feeCount.rows[0].count}`);
-    console.log('\n🏫 Students count per Class:');
-    console.table(byClass.rows);
-
+    // CSV sync
     const csvHeader = 'Student ID,Admn No,Roll No,Student Name,Class,Section,Father Name,Mother Name,Contact Phone,WhatsApp No,DOB,Caste & Religion,Sub Caste,Admission Date,Mother Tongue,Aadhar No,PEN No,APAAR ID,School Branch\n';
     const csvRows = students.map(s => `"${s.student_id}","${s.admn_no}","${s.roll_no}","${s.student_name}","${s.class}","${s.section}","${s.father_name}","${s.mother_name}","${s.contact_phone}","${s.whatsapp_no}","${s.dob}","${s.caste_religion}","${s.sub_caste}","${s.admission_date}","${s.mother_tongue}","${s.aadhar_number}","${s.pen_number}","${s.apaar_id}","${s.school_branch}"`).join('\n');
     fs.writeFileSync(path.join(__dirname, '..', 'Students_Master_Data.csv'), csvHeader + csvRows);
-    console.log('✅ Updated Students_Master_Data.csv');
 
-    console.log('\n🎉 ALL 789 STUDENT PARTICULARS FROM D:\\st venus ARE FULLY MIGRATED INTO AIVEN POSTGRESQL!\n');
+    console.log('\n🎉 ALL 789 STUDENT RECORDS RESET WITH CLEAN ZERO PAYMENTS IN AIVEN POSTGRESQL!\n');
 
   } catch (err) {
     console.error('❌ Migration Error:', err);

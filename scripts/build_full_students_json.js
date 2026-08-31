@@ -188,9 +188,11 @@ workbook.SheetNames.forEach(sheetName => {
       const monthlyFee = getMonthlyFee(normGrade);
       const contactPhone = fatherPhone || motherPhone || whatsappPhone || '+91 90000 00000';
 
-      const term1Marks = { Telugu: 85, Hindi: 82, English: 88, Maths: 90, Science: 86, Social: 84 };
-      const term2Marks = { Telugu: 88, Hindi: 84, English: 90, Maths: 92, Science: 89, Social: 87 };
-      const term3Marks = { Telugu: 90, Hindi: 86, English: 92, Maths: 95, Science: 91, Social: 89 };
+      // Clean default marks - 0 marks until staff/teachers enter marks
+      const zeroMarks = { Telugu: 0, Hindi: 0, English: 0, Maths: 0, Science: 0, Social: 0 };
+      const term1Marks = { ...zeroMarks };
+      const term2Marks = { ...zeroMarks };
+      const term3Marks = { ...zeroMarks };
 
       allStudents.push({
         id: uniqueStudentId,
@@ -222,38 +224,23 @@ workbook.SheetNames.forEach(sheetName => {
         admissionFee: 5000,
         examFee: 2000,
         totalMonths: 10,
-        paidMonths: 2,
+        paidMonths: 0,            // CLEAN: 0 months paid until staff records payments
         isNewStudent: false,
         attendanceHistory: {},
-        admissionFeePaid: true,
-        examFeePaid: true,
+        admissionFeePaid: false,  // CLEAN: false until staff records payment
+        examFeePaid: false,       // CLEAN: false until staff records payment
         termMarks: {
           '1st Term Exam': term1Marks,
           '2nd Term Exam': term2Marks,
           'Final Term Exam': term3Marks
         },
-        paymentHistory: [
-          {
-            receiptNo: `REC-STV-${admnNo || 1001}-1`,
-            date: '2026-06-15',
-            month: 'June Fee (Month 1)',
-            amount: monthlyFee,
-            mode: 'UPI'
-          },
-          {
-            receiptNo: `REC-STV-${admnNo || 1001}-2`,
-            date: '2026-07-15',
-            month: 'July Fee (Month 2)',
-            amount: monthlyFee,
-            mode: 'Cash'
-          }
-        ]
+        paymentHistory: []        // CLEAN: empty array, waiting for staff entries
       });
     }
   });
 });
 
-console.log(`Generated ${allStudents.length} full UI student objects.`);
+console.log(`Generated ${allStudents.length} clean student objects (0 initial payments).`);
 
 // Write to JSON file
 const outJsonPath = path.join(__dirname, '..', 'data_import', 'all_students.json');
