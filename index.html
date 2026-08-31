@@ -637,6 +637,7 @@
         { id: 102, title: 'Prepare 1st Assessment Question Papers', completed: false }
       ]),
       classFeeStructure: safeLoadJson('stv_fee_structure_v1', DEFAULT_CLASS_FEE_STRUCTURE),
+      lastReceiptSequence: safeLoadJson('stv_receipt_seq_v1', 0),
       classSubjectsMap: safeLoadJson('stv_class_subjects_v100', DEFAULT_CLASS_SUBJECTS),
       examsList: safeLoadJson('stv_exams_v100', DEFAULT_EXAMS),
       gradeRules: safeLoadJson('stv_grade_rules_v1', DEFAULT_GRADE_RULES),
@@ -9319,6 +9320,38 @@
       }
     }
 
+    
+    // --- OFFICIAL SEQUENTIAL RECEIPT NUMBER GENERATOR (STV/2026/0001, STV/2026/0002, ...) ---
+    function getNextReceiptNumber() {
+      let maxSeq = 0;
+
+      if (state && typeof state.lastReceiptSequence === 'number') {
+        maxSeq = Math.max(maxSeq, state.lastReceiptSequence);
+      }
+
+      // Scan all student payment histories to ensure strict chronological continuation
+      (state.students || []).forEach(s => {
+        (s.paymentHistory || []).forEach(tx => {
+          if (tx && tx.receiptNo) {
+            const match = tx.receiptNo.match(/STV\/2026\/(\d+)/i) || tx.receiptNo.match(/(\d+)/);
+            if (match) {
+              const num = parseInt(match[1], 10);
+              if (!isNaN(num) && num > maxSeq) {
+                maxSeq = num;
+              }
+            }
+          }
+        });
+      });
+
+      const nextSeq = maxSeq + 1;
+      state.lastReceiptSequence = nextSeq;
+      saveState();
+
+      const padded = String(nextSeq).padStart(4, '0');
+      return 'STV/2026/' + padded;
+    }
+
     function saveFeePayment(e) {
       e.preventDefault();
       if (!state.modalStudent) return;
@@ -9354,7 +9387,7 @@
         return;
       }
 
-      const receiptNo = `REC-STV-${Date.now().toString().slice(-5)}`;
+      const receiptNo = getNextReceiptNumber();
 
       let updatedTargetStudent = null;
 
