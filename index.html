@@ -583,7 +583,7 @@
       }
     };
 
-    const APP_VERSION = 'stv_v2026_11_months_fee_official';
+    const APP_VERSION = 'stv_v2026_receipt_0001_clean_v1';
     try {
       if (localStorage.getItem('stv_app_version') !== APP_VERSION) {
         localStorage.clear();
@@ -1065,7 +1065,7 @@
       };
     }
 
-    function getMonthlyInstallmentsBreakdown(student) {
+        function getMonthlyInstallmentsBreakdown(student) {
       const fc = getStudentFeeTotals(student);
       const monthConfig = [
         { num: 1, name: 'June 2026 Fee', shortName: 'June' },
@@ -1077,20 +1077,21 @@
         { num: 7, name: 'December 2026 Fee', shortName: 'December' },
         { num: 8, name: 'January 2027 Fee', shortName: 'January' },
         { num: 9, name: 'February 2027 Fee', shortName: 'February' },
-        { num: 10, name: 'March 2027 Fee', shortName: 'March' }
+        { num: 10, name: 'March 2027 Fee', shortName: 'March' },
+        { num: 11, name: 'April 2027 Fee', shortName: 'April' }
       ];
 
       const totalMonthlyDue = fc.monthlyRate + fc.monthlyBusFee;
       const history = student.paymentHistory || [];
-      const latestTx = history[0] || {};
 
       let totalPool = fc.totalPaidFee;
 
-      // 1. Allocate to Yearly Exam Fee (FIRST ROW as per user directive)
+      // 1. Allocate to Yearly Exam Fee (FIRST ROW)
       const examDue = fc.examFee;
       const examAllocated = Math.min(examDue, totalPool);
       totalPool -= examAllocated;
-      const isExamPaid = examAllocated >= examDue;
+      const isExamPaid = examAllocated >= examDue && examDue > 0;
+      const examTx = history.find(p => p.month && p.month.toLowerCase().includes('exam'));
 
       const examRow = {
         isAdmissionRow: false,
@@ -1105,12 +1106,12 @@
         isArrear: false,
         status: isExamPaid ? 'Paid' : 'Pending',
         amountPaid: examAllocated,
-        receiptNo: examAllocated > 0 ? (history.find(p => p.month && p.month.toLowerCase().includes('exam'))?.receiptNo || latestTx.receiptNo || 'REC-STV-EXAM') : '--',
-        paymentDate: examAllocated > 0 ? (history.find(p => p.month && p.month.toLowerCase().includes('exam'))?.date || latestTx.date || getTodayIsoDate()) : '--',
-        paymentMode: examAllocated > 0 ? (history.find(p => p.month && p.month.toLowerCase().includes('exam'))?.mode || latestTx.mode || 'UPI / Cash') : '--'
+        receiptNo: examAllocated > 0 ? (examTx?.receiptNo || history[0]?.receiptNo || '--') : '--',
+        paymentDate: examAllocated > 0 ? (examTx?.date || history[0]?.date || '--') : '--',
+        paymentMode: examAllocated > 0 ? (examTx?.mode || history[0]?.mode || '--') : '--'
       };
 
-      // 2. Allocate remaining pool sequentially to Monthly Installments (Rows 1 to 10)
+      // 2. Allocate remaining pool sequentially to Monthly Installments (Rows 1 to 11)
       const monthlyRows = monthConfig.map((m, idx) => {
         const monthAllocated = Math.min(totalMonthlyDue, totalPool);
         totalPool -= monthAllocated;
@@ -1133,9 +1134,9 @@
           isArrear,
           status: isPaid ? 'Paid' : (isArrear ? 'Arrear Pending' : 'Upcoming'),
           amountPaid: monthAllocated,
-          receiptNo: monthAllocated > 0 ? (tx?.receiptNo || latestTx.receiptNo || 'REC-STV-AUTO') : '--',
-          paymentDate: monthAllocated > 0 ? (tx?.date || latestTx.date || getTodayIsoDate()) : '--',
-          paymentMode: monthAllocated > 0 ? (tx?.mode || latestTx.mode || 'UPI / Cash') : '--'
+          receiptNo: monthAllocated > 0 ? (tx?.receiptNo || history[0]?.receiptNo || '--') : '--',
+          paymentDate: monthAllocated > 0 ? (tx?.date || history[0]?.date || '--') : '--',
+          paymentMode: monthAllocated > 0 ? (tx?.mode || history[0]?.mode || '--') : '--'
         };
       });
 
@@ -5616,7 +5617,7 @@
                     <div class="bg-indigo-50/80 p-3.5 rounded-2xl border border-indigo-200">
                       <span class="text-slate-500 text-[11px]">Monthly Fee</span>
                       <p class="text-indigo-950 text-base font-black mt-0.5">₹${fc.monthlyRate.toLocaleString()}/mo</p>
-                      <p class="text-[10px] text-indigo-700 font-semibold">₹${(fc.monthlyRate * 10).toLocaleString()} (10 Mos)</p>
+                      <p class="text-[10px] text-indigo-700 font-semibold">₹${(fc.monthlyRate * 11).toLocaleString()} (11 Months Package)</p>
                     </div>
                     <div class="bg-sky-50/80 p-3.5 rounded-2xl border border-sky-200">
                       <span class="text-slate-500 text-[11px]">Yearly Exam Fee</span>
@@ -5657,7 +5658,7 @@
                 <div class="space-y-2">
                   <div class="flex justify-between items-center border-b pb-1">
                     <h4 class="text-xs font-black uppercase text-indigo-950 tracking-wider">🗓️ Fee Schedule Ledger & Monthly Installments (Academic Year 2026–2027)</h4>
-                    <span class="text-[11px] font-bold text-slate-500">Exam Fee + Admission Fee + 10 Installments</span>
+                    <span class="text-[11px] font-bold text-slate-500">Yearly Exam Fee + 11 Monthly Installments</span>
                   </div>
 
                   <div class="overflow-x-auto border rounded-2xl">
