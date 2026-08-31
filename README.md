@@ -18,6 +18,14 @@ A comprehensive, responsive, and feature-rich Web-Based School & Student Managem
 
 ---
 
+## 🚀 Live Demo & Deployment
+
+- 🌐 **Live Vercel Application**: [https://temporary-zippy-opal-c7bxsio.vercel.app](https://temporary-zippy-opal-c7bxsio.vercel.app)
+- 📌 **Claim / Add to Vercel Account**: [Claim Deployment](https://vercel.com/claim-deployment?code=c6f88399-e6f4-4093-80a7-404f650ca126)
+- 🚀 **1-Click GitHub Deploy**: [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmanzoorsks-source%2Fstudent-management)
+
+---
+
 ## 🚀 Getting Started
 
 ### 1. Direct Browser Access
