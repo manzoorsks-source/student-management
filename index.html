@@ -428,9 +428,11 @@
     }
 
     function calculateGradeAndGPA(percentage) {
-      const pct = parseFloat(percentage) || 0;
+      let pct = parseFloat(percentage);
+      if (isNaN(pct)) return { grade: '--', gpa: 0, desc: 'N/A', isPass: false };
+      pct = Math.min(100, Math.max(0, pct));
       const rules = (typeof state !== 'undefined' && state && state.gradeRules) ? state.gradeRules : DEFAULT_GRADE_RULES;
-      const matched = rules.find(r => pct >= r.minPct && pct <= r.maxPct) || { grade: 'F', gpa: 0, desc: 'Fail' };
+      const matched = rules.find(r => pct >= r.minPct && (pct <= r.maxPct || (r.maxPct === 100 && pct >= 100))) || rules[0] || { grade: 'F', gpa: 0, desc: 'Fail' };
       return {
         grade: matched.grade,
         gpa: matched.gpa,
@@ -2926,18 +2928,24 @@
                             const eSA2 = getStudentSubjectEntry(student, 'SA2', { ...subObj, faMax: faLimit, saMax: saLimit, maxMarks: maxLimit });
 
                             const faList = [eFA1, eFA2, eFA3, eFA4].filter(e => e.entered && e.mark !== null);
-                            const faAvg = faList.length > 0 ? Math.round(faList.reduce((s, e) => s + e.mark, 0) / faList.length) : null;
+                            const rawFaAvg = faList.length > 0 ? (faList.reduce((s, e) => s + Math.min(faLimit, e.mark), 0) / faList.length) : null;
+                            const faAvg = rawFaAvg !== null ? Math.round(rawFaAvg) : null;
+
                             const saList = [eSA1, eSA2].filter(e => e.entered && e.mark !== null);
-                            const saVal = saList.length > 0 ? Math.round(saList.reduce((s, e) => s + e.mark, 0) / saList.length) : null;
+                            const rawSaVal = saList.length > 0 ? (saList.reduce((s, e) => {
+                              const scaled = e.mark > saLimit ? (e.mark / maxLimit) * saLimit : e.mark;
+                              return s + scaled;
+                            }, 0) / saList.length) : null;
+                            const saVal = rawSaVal !== null ? Math.round(rawSaVal) : null;
 
                             let total100 = null;
                             let gradeStr = '--';
                             if (faAvg !== null && saVal !== null) {
-                              total100 = Math.round(faAvg + saVal);
+                              total100 = Math.min(maxLimit, Math.round(faAvg + saVal));
                             } else if (faAvg !== null && saVal === null) {
-                              total100 = Math.round((faAvg / faLimit) * maxLimit);
+                              total100 = Math.min(maxLimit, Math.round((faAvg / faLimit) * maxLimit));
                             } else if (faAvg === null && saVal !== null) {
-                              total100 = Math.round((saVal / saLimit) * maxLimit);
+                              total100 = Math.min(maxLimit, Math.round((saVal / saLimit) * maxLimit));
                             }
                             if (total100 !== null) {
                               gradeStr = calculateGradeAndGPA((total100 / maxLimit) * 100).grade;
@@ -5176,25 +5184,30 @@
             // Find all entered FAs
             const faEntries = ['FA1', 'FA2', 'FA3', 'FA4']
               .map(fa => getStudentSubjectEntry(s, fa, item))
-              .filter(e => e.entered);
-            const faAvg = faEntries.length > 0 ? Math.round(faEntries.reduce((sum, e) => sum + e.mark, 0) / faEntries.length) : null;
+              .filter(e => e.entered && e.mark !== null);
+            const rawFaAvg = faEntries.length > 0 ? (faEntries.reduce((sum, e) => sum + Math.min(item.faMax, e.mark), 0) / faEntries.length) : null;
+            const faAvg = rawFaAvg !== null ? Math.round(rawFaAvg) : null;
 
             // Find all entered SAs
             const saEntries = ['SA1', 'SA2']
               .map(sa => getStudentSubjectEntry(s, sa, item))
-              .filter(e => e.entered);
-            const saVal = saEntries.length > 0 ? Math.round(saEntries.reduce((sum, e) => sum + e.mark, 0) / saEntries.length) : null;
+              .filter(e => e.entered && e.mark !== null);
+            const rawSaVal = saEntries.length > 0 ? (saEntries.reduce((sum, e) => {
+              const scaled = e.mark > item.saMax ? (e.mark / item.maxMarks) * item.saMax : e.mark;
+              return sum + scaled;
+            }, 0) / saEntries.length) : null;
+            const saVal = rawSaVal !== null ? Math.round(rawSaVal) : null;
 
             let total100 = null;
             let subGrade = '--';
             let subGp = '--';
 
             if (faAvg !== null && saVal !== null) {
-              total100 = Math.round(faAvg + saVal);
+              total100 = Math.min(item.maxMarks, Math.round(faAvg + saVal));
             } else if (faAvg !== null && saVal === null) {
-              total100 = Math.round((faAvg / item.faMax) * item.maxMarks);
+              total100 = Math.min(item.maxMarks, Math.round((faAvg / item.faMax) * item.maxMarks));
             } else if (faAvg === null && saVal !== null) {
-              total100 = Math.round((saVal / item.saMax) * item.maxMarks);
+              total100 = Math.min(item.maxMarks, Math.round((saVal / item.saMax) * item.maxMarks));
             }
 
             if (total100 !== null) {
@@ -5552,19 +5565,25 @@
           const saRows = subjectsForCard.map(item => {
             const saEntry = getStudentSubjectEntry(s, saCode, item);
             const faList = saCode === 'SA1' ? ['FA1', 'FA2'] : ['FA1', 'FA2', 'FA3', 'FA4'];
-            const faEntries = faList.map(fa => getStudentSubjectEntry(s, fa, item)).filter(e => e.entered);
-            const faAvg = faEntries.length > 0 ? Math.round(faEntries.reduce((sum, e) => sum + e.mark, 0) / faEntries.length) : null;
+            const faEntries = faList.map(fa => getStudentSubjectEntry(s, fa, item)).filter(e => e.entered && e.mark !== null);
+            const rawFaAvg = faEntries.length > 0 ? (faEntries.reduce((sum, e) => sum + Math.min(item.faMax, e.mark), 0) / faEntries.length) : null;
+            const faAvg = rawFaAvg !== null ? Math.round(rawFaAvg) : null;
+
+            let saScaled = null;
+            if (saEntry.entered && saEntry.mark !== null) {
+              saScaled = saEntry.mark > item.saMax ? (saEntry.mark / item.maxMarks) * item.saMax : saEntry.mark;
+            }
 
             let total100 = null;
             let subGrade = '--';
             let subGp = '--';
 
-            if (saEntry.entered && faAvg !== null) {
-              total100 = Math.round(saEntry.mark + faAvg);
-            } else if (saEntry.entered && faAvg === null) {
-              total100 = Math.round((saEntry.mark / item.saMax) * item.maxMarks);
-            } else if (!saEntry.entered && faAvg !== null) {
-              total100 = Math.round((faAvg / item.faMax) * item.maxMarks);
+            if (saScaled !== null && faAvg !== null) {
+              total100 = Math.min(item.maxMarks, Math.round(saScaled + faAvg));
+            } else if (saScaled !== null && faAvg === null) {
+              total100 = Math.min(item.maxMarks, Math.round((saScaled / item.saMax) * item.maxMarks));
+            } else if (saScaled === null && faAvg !== null) {
+              total100 = Math.min(item.maxMarks, Math.round((faAvg / item.faMax) * item.maxMarks));
             }
 
             if (total100 !== null) {
