@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>St. Venus High School - Marks Calculation Blueprint & Assessment Guide</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 10mm 10mm 10mm 10mm;
+      }
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .page-break {
+        page-break-after: always;
+        break-after: page;
+      }
+      table {
+        page-break-inside: avoid;
+      }
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+    }
+  </style>
+</head>
+<body class="p-4 md:p-8">
+
+  <!-- TOP ACTION BAR (NO-PRINT) -->
+  <div class="max-w-4xl mx-auto mb-6 flex flex-wrap justify-between items-center bg-indigo-900 text-white p-4 rounded-2xl shadow-xl no-print gap-3">
+    <div class="flex items-center space-x-3">
+      <span class="text-3xl">📄</span>
+      <div>
+        <h1 class="text-base md:text-lg font-black tracking-tight">ST. VENUS HIGH SCHOOL - ASSESSMENT BLUEPRINT</h1>
+        <p class="text-xs text-indigo-200 font-medium">Official CCE Examination & Marks Calculation Reference Manual</p>
+      </div>
+    </div>
+    <div class="flex items-center space-x-2">
+      <button onclick="window.print()" class="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-5 py-2.5 rounded-xl text-xs flex items-center space-x-2 shadow-lg hover:shadow-amber-400/20 active:scale-95 transition-all">
+        <span>🖨️</span>
+        <span>Download / Print as PDF</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- DOCUMENT CONTENT (A4 READY) -->
+  <div class="max-w-4xl mx-auto bg-white rounded-3xl p-6 md:p-10 shadow-2xl border border-slate-200 space-y-8">
+
+    <!-- HEADER BANNER -->
+    <div class="flex justify-between items-center border-b-2 border-slate-900 pb-5">
+      <div class="flex items-center space-x-4">
+        <div class="w-16 h-16 bg-rose-900 text-amber-400 font-black rounded-2xl flex items-center justify-center text-2xl shadow-md border-2 border-amber-400">
+          SV
+        </div>
+        <div>
+          <h1 class="text-2xl font-black text-slate-950 uppercase tracking-tight">ST. VENUS HIGH SCHOOL</h1>
+          <p class="text-xs font-bold text-slate-600 uppercase">New Ramnagar Colony, Chilkanagar, Uppal, Hyderabad • Academic Year 2026–2027</p>
+          <span class="inline-block mt-1 px-3 py-0.5 bg-indigo-100 text-indigo-900 text-[11px] font-extrabold rounded-md">Telangana State Board CCE Evaluation Blueprint</span>
+        </div>
+      </div>
+      <div class="text-right hidden sm:block">
+        <span class="block text-xs font-bold text-slate-400 uppercase">DOCUMENT ID</span>
+        <span class="font-mono text-xs font-extrabold text-slate-800">SVHS-EVAL-2026-V1</span>
+      </div>
+    </div>
+
+    <!-- 1. EXAMINATION STRUCTURE OVERVIEW -->
+    <section class="space-y-3">
+      <div class="flex items-center space-x-2 border-b border-indigo-200 pb-1">
+        <span class="text-lg">📊</span>
+        <h2 class="text-base font-black text-indigo-950 uppercase tracking-wide">1. Examination Structure & Maximum Marks</h2>
+      </div>
+      
+      <div class="overflow-x-auto rounded-xl border border-slate-300">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead class="bg-slate-900 text-white font-black text-center">
+            <tr>
+              <th class="p-2.5 border-r border-slate-700 w-16">Exam</th>
+              <th class="p-2.5 border-r border-slate-700 text-left">Exam Description</th>
+              <th class="p-2.5 border-r border-slate-700 w-32">Regular Subjects</th>
+              <th class="p-2.5 border-r border-slate-700 w-36">10th Class (P.S / B.S)</th>
+              <th class="p-2.5">Evaluation Components</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200 font-semibold text-center">
+            <tr class="hover:bg-slate-50">
+              <td class="p-2 border-r font-black text-sky-900">FA1</td>
+              <td class="p-2 border-r text-left font-bold">Formative Assessment 1</td>
+              <td class="p-2 border-r font-mono font-bold text-slate-900">20 Marks</td>
+              <td class="p-2 border-r font-mono font-bold text-slate-900">10 Marks each</td>
+              <td class="p-2 text-left">4 Internal Components (5M each)</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="p-2 border-r font-black text-sky-900">FA2</td>
+              <td class="p-2 border-r text-left font-bold">Formative Assessment 2</td>
+              <td class="p-2 border-r font-mono font-bold text-slate-900">20 Marks</td>
+              <td class="p-2 border-r font-mono font-bold text-slate-900">10 Marks each</td>
+              <td class="p-2 text-left">4 Internal Components (5M each)</td>
+            </tr>
+            <tr class="hover:bg-slate-50 bg-emerald-50/50">
+              <td class="p-2 border-r font-black text-emerald-900">SA1</td>
+              <td class="p-2 border-r text-left font-bold">Summative Assessment 1</td>
+              <td class="p-2 border-r font-mono font-black text-emerald-950">80M + 20M = 100M</td>
+              <td class="p-2 border-r font-mono font-black text-emerald-950">40M + 10M = 50M</td>
+              <td class="p-2 text-left">80M Written + 20M FA Internal Average</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="p-2 border-r font-black text-sky-900">FA3</td>
+              <td class="p-2 border-r text-left font-bold">Formative Assessment 3</td>
+              <td class="p-2 border-r font-mono font-bold text-slate-900">20 Marks</td>
+              <td class="p-2 border-r font-mono font-bold text-slate-900">10 Marks each</td>
+              <td class="p-2 text-left">4 Internal Components (5M each)</td>
+            </tr>
+            <tr class="hover:bg-slate-50">
+              <td class="p-2 border-r font-black text-sky-900">FA4</td>
+              <td class="p-2 border-r text-left font-bold">Formative Assessment 4</td>
+              <td class="p-2 border-r font-mono font-bold text-slate-900">20 Marks</td>
+              <td class="p-2 border-r font-mono font-bold text-slate-900">10 Marks each</td>
+              <td class="p-2 text-left">4 Internal Components (5M each)</td>
+            </tr>
+            <tr class="hover:bg-slate-50 bg-indigo-50/50">
+              <td class="p-2 border-r font-black text-indigo-900">SA2</td>
+              <td class="p-2 border-r text-left font-bold">Summative Assessment 2 (Annual)</td>
+              <td class="p-2 border-r font-mono font-black text-indigo-950">80M + 20M = 100M</td>
+              <td class="p-2 border-r font-mono font-black text-indigo-950">40M + 10M = 50M</td>
+              <td class="p-2 text-left">80M Written + 20M FA Internal Average</td>
+            </tr>
+            <tr class="bg-rose-100/70 font-black text-slate-950">
+              <td class="p-2.5 border-r font-black text-rose-950">ANNUAL</td>
+              <td class="p-2.5 border-r text-left font-black text-rose-950">Combined Cumulative Progress Report</td>
+              <td class="p-2.5 border-r font-mono font-black text-rose-950">100M Total</td>
+              <td class="p-2.5 border-r font-mono font-black text-rose-950">50M each (100M Science)</td>
+              <td class="p-2.5 text-left font-black">4 FA Avg (20M) + SA (80M) = 100M</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 2. TS CCE GRADING SCALE -->
+    <section class="space-y-3">
+      <div class="flex items-center space-x-2 border-b border-indigo-200 pb-1">
+        <span class="text-lg">🎯</span>
+        <h2 class="text-base font-black text-indigo-950 uppercase tracking-wide">2. Official Telangana CCE Grading Scale</h2>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 text-center text-xs">
+        <div class="bg-emerald-50 border-2 border-emerald-500 p-2.5 rounded-xl">
+          <span class="block font-mono text-[11px] text-slate-500 font-bold">90% – 100%</span>
+          <span class="text-xl font-black text-emerald-700">A+</span>
+          <span class="block text-[10px] font-bold text-emerald-900 mt-0.5">10 GP • Outstanding</span>
+        </div>
+        <div class="bg-sky-50 border-2 border-sky-500 p-2.5 rounded-xl">
+          <span class="block font-mono text-[11px] text-slate-500 font-bold">80% – 89.9%</span>
+          <span class="text-xl font-black text-sky-700">A</span>
+          <span class="block text-[10px] font-bold text-sky-900 mt-0.5">9 GP • Excellent</span>
+        </div>
+        <div class="bg-blue-50 border-2 border-blue-500 p-2.5 rounded-xl">
+          <span class="block font-mono text-[11px] text-slate-500 font-bold">70% – 79.9%</span>
+          <span class="text-xl font-black text-blue-700">B+</span>
+          <span class="block text-[10px] font-bold text-blue-900 mt-0.5">8 GP • Very Good</span>
+        </div>
+        <div class="bg-amber-50 border-2 border-amber-500 p-2.5 rounded-xl">
+          <span class="block font-mono text-[11px] text-slate-500 font-bold">60% – 69.9%</span>
+          <span class="text-xl font-black text-amber-700">B</span>
+          <span class="block text-[10px] font-bold text-amber-900 mt-0.5">7 GP • Good</span>
+        </div>
+        <div class="bg-orange-50 border-2 border-orange-500 p-2.5 rounded-xl">
+          <span class="block font-mono text-[11px] text-slate-500 font-bold">50% – 59.9%</span>
+          <span class="text-xl font-black text-orange-700">C</span>
+          <span class="block text-[10px] font-bold text-orange-900 mt-0.5">6 GP • Satisfactory</span>
+        </div>
+        <div class="bg-purple-50 border-2 border-purple-500 p-2.5 rounded-xl">
+          <span class="block font-mono text-[11px] text-slate-500 font-bold">40% – 49.9%</span>
+          <span class="text-xl font-black text-purple-700">D</span>
+          <span class="block text-[10px] font-bold text-purple-900 mt-0.5">5 GP • Pass</span>
+        </div>
+        <div class="bg-rose-50 border-2 border-rose-500 p-2.5 rounded-xl">
+          <span class="block font-mono text-[11px] text-slate-500 font-bold">Below 40%</span>
+          <span class="text-xl font-black text-rose-700">F</span>
+          <span class="block text-[10px] font-bold text-rose-900 mt-0.5">0 GP • Detained</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. FORMATIVE ASSESSMENT (FA) BLUEPRINT & 4 COMPONENTS -->
+    <section class="space-y-3">
+      <div class="flex items-center space-x-2 border-b border-indigo-200 pb-1">
+        <span class="text-lg">📝</span>
+        <h2 class="text-base font-black text-indigo-950 uppercase tracking-wide">3. Formative Assessment (FA1, FA2, FA3, FA4) Calculation Formula</h2>
+      </div>
+
+      <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2 text-xs">
+        <p class="font-bold text-slate-800">Har Formative Assessment 4 specific CCE components me divide hota hai:</p>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+          <div class="bg-white p-2.5 rounded-xl border border-slate-300">
+            <span class="block font-extrabold text-slate-900">1. Reading & Reflection</span>
+            <span class="text-xs font-mono font-black text-amber-700">Max 5 Marks (25%)</span>
+          </div>
+          <div class="bg-white p-2.5 rounded-xl border border-slate-300">
+            <span class="block font-extrabold text-slate-900">2. Written Work</span>
+            <span class="text-xs font-mono font-black text-amber-700">Max 5 Marks (25%)</span>
+          </div>
+          <div class="bg-white p-2.5 rounded-xl border border-slate-300">
+            <span class="block font-extrabold text-slate-900">3. Project Work</span>
+            <span class="text-xs font-mono font-black text-amber-700">Max 5 Marks (25%)</span>
+          </div>
+          <div class="bg-white p-2.5 rounded-xl border border-slate-300">
+            <span class="block font-extrabold text-slate-900">4. Slip Test</span>
+            <span class="text-xs font-mono font-black text-amber-700">Max 5 Marks (25%)</span>
+          </div>
+        </div>
+        <p class="text-[11px] text-slate-600 font-semibold italic pt-1">
+          * Mathematical Formula: $\text{Slip Test} = \text{Round}(M \times 0.25)$, $\text{Project} = \text{Round}(M \times 0.25)$, $\text{Written} = \text{Round}(M \times 0.25)$, $\text{Read/Refl} = M - (\text{Slip} + \text{Proj} + \text{Writ})$. Total always equals entered mark $M$.
+        </p>
+      </div>
+    </section>
+
+    <!-- 4. SUMMATIVE ASSESSMENT (SA) BLUEPRINT -->
+    <section class="space-y-3">
+      <div class="flex items-center space-x-2 border-b border-indigo-200 pb-1">
+        <span class="text-lg">📗</span>
+        <h2 class="text-base font-black text-indigo-950 uppercase tracking-wide">4. Summative Assessment (SA1 & SA2) Calculation Formula</h2>
+      </div>
+
+      <div class="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-300 space-y-2 text-xs">
+        <div class="p-3 bg-white rounded-xl border border-emerald-400 font-mono text-center text-sm font-black text-emerald-950">
+          TOTAL SA1+FA (100M) = SA1 Written (80M) + FA Average (20M)
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div class="bg-white p-3 rounded-xl border border-slate-200">
+            <span class="font-black text-slate-900 block mb-1">SA1 FA Average Formula:</span>
+            <p class="text-[11px] text-slate-700">$\text{FA Avg} = \frac{\text{FA1} + \text{FA2}}{2}$ (ya sirf FA1 agar FA2 abhi conduct nahi hua hai).</p>
+          </div>
+          <div class="bg-white p-3 rounded-xl border border-slate-200">
+            <span class="font-black text-slate-900 block mb-1">SA2 (Annual) FA Average Formula:</span>
+            <p class="text-[11px] text-slate-700">$\text{FA Avg} = \frac{\text{FA1} + \text{FA2} + \text{FA3} + \text{FA4}}{4}$ (conducted FAs ka average).</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. COMBINED ANNUAL CUMULATIVE PROGRESS CARD EXAMPLE -->
+    <section class="space-y-3">
+      <div class="flex items-center space-x-2 border-b border-indigo-200 pb-1">
+        <span class="text-lg">🏆</span>
+        <h2 class="text-base font-black text-indigo-950 uppercase tracking-wide">5. Combined Annual Cumulative Progress Card - Complete Worked Example (10th Class)</h2>
+      </div>
+
+      <div class="overflow-x-auto rounded-xl border-2 border-rose-900">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="bg-rose-900 text-white font-black text-center">
+              <th class="p-2 border-r border-rose-800 w-10">Sl No.</th>
+              <th class="p-2 border-r border-rose-800 text-left">SUBJECT</th>
+              <th class="p-2 border-r border-rose-800 bg-rose-800 w-28">4 FA (Avg 20M)</th>
+              <th class="p-2 border-r border-rose-800 bg-rose-800 w-24">SA (80M)</th>
+              <th class="p-2 border-r border-rose-800 bg-amber-600 text-slate-950 w-28">TOTAL (100M)</th>
+              <th class="p-2 border-r border-rose-800 w-20">GRADE</th>
+              <th class="p-2 bg-sky-900 text-white w-24">GRADE POINT</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-300 font-bold text-center">
+            <tr>
+              <td class="p-2 border-r text-slate-500">1</td>
+              <td class="p-2 border-r text-left font-black text-slate-900 bg-slate-50">1st Lang. (Telugu)</td>
+              <td class="p-2 border-r font-mono text-slate-700">17</td>
+              <td class="p-2 border-r font-mono text-slate-700">68</td>
+              <td class="p-2 border-r font-mono font-black text-rose-950 bg-amber-50">85 / 100</td>
+              <td class="p-2 border-r font-black text-rose-900 bg-rose-50/60">A</td>
+              <td class="p-2 font-mono font-black text-sky-900 bg-sky-50/60">9 GP</td>
+            </tr>
+            <tr>
+              <td class="p-2 border-r text-slate-500">2</td>
+              <td class="p-2 border-r text-left font-black text-slate-900 bg-slate-50">2nd Lang. (Hindi)</td>
+              <td class="p-2 border-r font-mono text-slate-700">18</td>
+              <td class="p-2 border-r font-mono text-slate-700">72</td>
+              <td class="p-2 border-r font-mono font-black text-rose-950 bg-amber-50">90 / 100</td>
+              <td class="p-2 border-r font-black text-rose-900 bg-rose-50/60">A+</td>
+              <td class="p-2 font-mono font-black text-sky-900 bg-sky-50/60">10 GP</td>
+            </tr>
+            <tr>
+              <td class="p-2 border-r text-slate-500">3</td>
+              <td class="p-2 border-r text-left font-black text-slate-900 bg-slate-50">3rd Lang. (English)</td>
+              <td class="p-2 border-r font-mono text-slate-700">20</td>
+              <td class="p-2 border-r font-mono text-slate-700">74</td>
+              <td class="p-2 border-r font-mono font-black text-rose-950 bg-amber-50">94 / 100</td>
+              <td class="p-2 border-r font-black text-rose-900 bg-rose-50/60">A+</td>
+              <td class="p-2 font-mono font-black text-sky-900 bg-sky-50/60">10 GP</td>
+            </tr>
+            <tr>
+              <td class="p-2 border-r text-slate-500">4</td>
+              <td class="p-2 border-r text-left font-black text-slate-900 bg-slate-50">MATHEMATICS</td>
+              <td class="p-2 border-r font-mono text-slate-700">16</td>
+              <td class="p-2 border-r font-mono text-slate-700">65</td>
+              <td class="p-2 border-r font-mono font-black text-rose-950 bg-amber-50">81 / 100</td>
+              <td class="p-2 border-r font-black text-rose-900 bg-rose-50/60">A</td>
+              <td class="p-2 font-mono font-black text-sky-900 bg-sky-50/60">9 GP</td>
+            </tr>
+            <tr>
+              <td class="p-2 border-r text-slate-500">5</td>
+              <td class="p-2 border-r text-left font-black text-slate-900 bg-slate-50">Biological Science (B.S)</td>
+              <td class="p-2 border-r font-mono text-slate-700">8</td>
+              <td class="p-2 border-r font-mono text-slate-700">33</td>
+              <td class="p-2 border-r font-mono font-black text-rose-950 bg-amber-50">41 / 50</td>
+              <td class="p-2 border-r font-black text-rose-900 bg-rose-50/60">A</td>
+              <td class="p-2 font-mono font-black text-sky-900 bg-sky-50/60">9 GP</td>
+            </tr>
+            <tr>
+              <td class="p-2 border-r text-slate-500">6</td>
+              <td class="p-2 border-r text-left font-black text-slate-900 bg-slate-50">Physical Science (P.S)</td>
+              <td class="p-2 border-r font-mono text-slate-700">8</td>
+              <td class="p-2 border-r font-mono text-slate-700">32</td>
+              <td class="p-2 border-r font-mono font-black text-rose-950 bg-amber-50">40 / 50</td>
+              <td class="p-2 border-r font-black text-rose-900 bg-rose-50/60">A</td>
+              <td class="p-2 font-mono font-black text-sky-900 bg-sky-50/60">9 GP</td>
+            </tr>
+            <tr>
+              <td class="p-2 border-r text-slate-500">7</td>
+              <td class="p-2 border-r text-left font-black text-slate-900 bg-slate-50">SOCIAL STUDIES</td>
+              <td class="p-2 border-r font-mono text-slate-700">17</td>
+              <td class="p-2 border-r font-mono text-slate-700">68</td>
+              <td class="p-2 border-r font-mono font-black text-rose-950 bg-amber-50">85 / 100</td>
+              <td class="p-2 border-r font-black text-rose-900 bg-rose-50/60">A</td>
+              <td class="p-2 font-mono font-black text-sky-900 bg-sky-50/60">9 GP</td>
+            </tr>
+            <tr class="bg-rose-100 text-rose-950 font-black text-center border-t-2 border-rose-800">
+              <td colspan="2" class="p-2.5 text-left uppercase font-black tracking-wider">GRAND TOTAL</td>
+              <td class="p-2.5 font-mono text-rose-900 italic">--</td>
+              <td class="p-2.5 font-mono text-rose-900 italic">--</td>
+              <td class="p-2.5 font-mono text-base font-black text-rose-950 bg-amber-100">516 / 600</td>
+              <td class="p-2.5 text-base font-black text-rose-900">A</td>
+              <td class="p-2.5 font-mono text-base font-black text-sky-900 bg-sky-100">9.2 GP</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- SUMMARY PERFORMANCE STATS -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-center">
+        <div class="p-3 bg-slate-100 rounded-xl border border-slate-300">
+          <span class="block text-[11px] font-bold text-slate-500 uppercase">Cumulative Percentage</span>
+          <span class="text-xl font-mono font-black text-slate-900">86.0%</span>
+        </div>
+        <div class="p-3 bg-rose-900 text-white rounded-xl shadow-sm">
+          <span class="block text-[11px] font-bold text-rose-200 uppercase">Cumulative GPA</span>
+          <span class="text-xl font-mono font-black text-amber-300">9.2 CGPA</span>
+        </div>
+        <div class="p-3 bg-emerald-100 text-emerald-900 rounded-xl border border-emerald-400">
+          <span class="block text-[11px] font-bold text-emerald-700 uppercase">Final Academic Result</span>
+          <span class="text-lg font-black text-emerald-950">PASSED & PROMOTED</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SIGNATURE FOOTER -->
+    <div class="pt-6 border-t-2 border-slate-900 grid grid-cols-3 gap-4 text-center text-xs font-bold text-slate-800">
+      <div>
+        <div class="border-b border-dashed border-slate-400 h-10 mb-2"></div>
+        <span>Sign. of Class Teacher</span>
+      </div>
+      <div>
+        <div class="border-b border-dashed border-slate-400 h-10 mb-2"></div>
+        <span>Principal / Headmaster</span>
+      </div>
+      <div>
+        <div class="border-b border-dashed border-slate-400 h-10 mb-2"></div>
+        <span>Correspondent / Management</span>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>
