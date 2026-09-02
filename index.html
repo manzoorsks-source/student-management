@@ -415,6 +415,8 @@
         desc: matched.desc,
         isPass: matched.grade !== 'F'
       };
+    }
+
     function findExamData(student, examCode) {
       if (!student || !student.termMarks) return null;
       const target = (examCode || '').toUpperCase().trim();
