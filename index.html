@@ -175,105 +175,87 @@
     const EXAM_TERMS = ['FA1', 'FA2', 'FA3', 'FA4', 'SA1', 'SA2'];
 
     const DEFAULT_EXAMS = [
-      { code: 'FA1', name: 'FA1 – Formative Assessment 1', maxMarks: 100, weightage: 10 },
-      { code: 'FA2', name: 'FA2 – Formative Assessment 2', maxMarks: 100, weightage: 10 },
-      { code: 'FA3', name: 'FA3 – Formative Assessment 3', maxMarks: 100, weightage: 10 },
-      { code: 'FA4', name: 'FA4 – Formative Assessment 4', maxMarks: 100, weightage: 10 },
+      { code: 'FA1', name: 'FA1 – Formative Assessment 1', maxMarks: 20, weightage: 10 },
+      { code: 'FA2', name: 'FA2 – Formative Assessment 2', maxMarks: 20, weightage: 10 },
+      { code: 'FA3', name: 'FA3 – Formative Assessment 3', maxMarks: 20, weightage: 10 },
+      { code: 'FA4', name: 'FA4 – Formative Assessment 4', maxMarks: 20, weightage: 10 },
       { code: 'SA1', name: 'SA1 – Summative Assessment 1', maxMarks: 100, weightage: 30 },
       { code: 'SA2', name: 'SA2 – Summative Assessment 2', maxMarks: 100, weightage: 30 }
     ];
 
-        const DEFAULT_CLASS_SUBJECTS = {
+    const DEFAULT_CLASS_SUBJECTS = {
       'Nursery': [
-        { name: 'Language & Orals', shortName: 'Lang', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'General English / Oral', shortName: 'Eng', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Rhymes / Recitation', shortName: 'Rhy', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Drawing & Coloring', shortName: 'Drw', maxMarks: 100, passMarks: 35, type: 'Activity' }
+        { name: 'English', shortName: 'ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
+        { name: 'Rhymes & Story Telling', shortName: 'RHY', maxMarks: 100, passMarks: 35, type: 'Core' },
+        { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
+        { name: 'Environmental Studies (EVS)', shortName: 'EVS', maxMarks: 100, passMarks: 35, type: 'Core' },
+        { name: 'Drawing & Art', shortName: 'ART', maxMarks: 100, passMarks: 35, type: 'Core' }
       ],
       'LKG': [
-        { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Hindi', shortName: 'HIN', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'English', shortName: 'ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
+        { name: 'Rhymes & Story Telling', shortName: 'RHY', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'EVS', shortName: 'EVS', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'General English / Oral', shortName: 'GenEng', maxMarks: 100, passMarks: 35, type: 'Oral' },
-        { name: 'Rhymes / Oral', shortName: 'Rhymes', maxMarks: 100, passMarks: 35, type: 'Oral' },
-        { name: 'Drawing', shortName: 'DRW', maxMarks: 100, passMarks: 35, type: 'Activity' }
+        { name: 'Environmental Studies (EVS)', shortName: 'EVS', maxMarks: 100, passMarks: 35, type: 'Core' },
+        { name: 'Drawing & Art', shortName: 'ART', maxMarks: 100, passMarks: 35, type: 'Core' }
       ],
       'UKG': [
-        { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Hindi', shortName: 'HIN', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'English', shortName: 'ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
+        { name: 'Rhymes & Story Telling', shortName: 'RHY', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'EVS', shortName: 'EVS', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'General English / Oral', shortName: 'GenEng', maxMarks: 100, passMarks: 35, type: 'Oral' },
-        { name: 'Rhymes / Oral', shortName: 'Rhymes', maxMarks: 100, passMarks: 35, type: 'Oral' },
-        { name: 'Drawing', shortName: 'DRW', maxMarks: 100, passMarks: 35, type: 'Activity' }
+        { name: 'Environmental Studies (EVS)', shortName: 'EVS', maxMarks: 100, passMarks: 35, type: 'Core' },
+        { name: 'Drawing & Art', shortName: 'ART', maxMarks: 100, passMarks: 35, type: 'Core' }
       ],
       '1st Class': [
         { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Hindi', shortName: 'HIN', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'English', shortName: 'ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'EVS', shortName: 'EVS', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'General English', shortName: 'GenEng', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Drawing', shortName: 'DRW', maxMarks: 100, passMarks: 35, type: 'Activity' }
+        { name: 'Environmental Studies (EVS)', shortName: 'EVS', maxMarks: 100, passMarks: 35, type: 'Core' }
       ],
       '2nd Class': [
         { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Hindi', shortName: 'HIN', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'English', shortName: 'ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'EVS', shortName: 'EVS', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'General English', shortName: 'GenEng', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Drawing', shortName: 'DRW', maxMarks: 100, passMarks: 35, type: 'Activity' }
+        { name: 'Environmental Studies (EVS)', shortName: 'EVS', maxMarks: 100, passMarks: 35, type: 'Core' }
       ],
       '3rd Class': [
         { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'Hindi', shortName: 'HIN', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'English', shortName: 'ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'EVS', shortName: 'EVS', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'General English', shortName: 'GenEng', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Drawing', shortName: 'DRW', maxMarks: 100, passMarks: 35, type: 'Activity' }
+        { name: 'Environmental Studies (EVS)', shortName: 'EVS', maxMarks: 100, passMarks: 35, type: 'Core' },
+        { name: 'Social Studies', shortName: 'SOC', maxMarks: 100, passMarks: 35, type: 'Core' }
       ],
       '4th Class': [
         { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'Hindi', shortName: 'HIN', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'English', shortName: 'ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'EVS', shortName: 'EVS', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'General English', shortName: 'GenEng', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Drawing', shortName: 'DRW', maxMarks: 100, passMarks: 35, type: 'Activity' }
+        { name: 'Environmental Studies (EVS)', shortName: 'EVS', maxMarks: 100, passMarks: 35, type: 'Core' },
+        { name: 'Social Studies', shortName: 'SOC', maxMarks: 100, passMarks: 35, type: 'Core' }
       ],
       '5th Class': [
         { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'Hindi', shortName: 'HIN', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'English', shortName: 'ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'EVS', shortName: 'EVS', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'General English', shortName: 'GenEng', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Drawing', shortName: 'DRW', maxMarks: 100, passMarks: 35, type: 'Activity' }
+        { name: 'Environmental Studies (EVS)', shortName: 'EVS', maxMarks: 100, passMarks: 35, type: 'Core' },
+        { name: 'Social Studies', shortName: 'SOC', maxMarks: 100, passMarks: 35, type: 'Core' }
       ],
       '6th Class': [
         { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'Hindi', shortName: 'HIN', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'English', shortName: 'ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Science', shortName: 'SCI', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Social', shortName: 'SOC', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'General English', shortName: 'GenEng', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Drawing', shortName: 'DRW', maxMarks: 100, passMarks: 35, type: 'Activity' }
+        { name: 'General Science', shortName: 'SCI', maxMarks: 100, passMarks: 35, type: 'Core' },
+        { name: 'Social Studies', shortName: 'SOC', maxMarks: 100, passMarks: 35, type: 'Core' }
       ],
       '7th Class': [
         { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'Hindi', shortName: 'HIN', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'English', shortName: 'ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Science', shortName: 'SCI', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Social', shortName: 'SOC', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'General English', shortName: 'GenEng', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Drawing', shortName: 'DRW', maxMarks: 100, passMarks: 35, type: 'Activity' }
+        { name: 'General Science', shortName: 'SCI', maxMarks: 100, passMarks: 35, type: 'Core' },
+        { name: 'Social Studies', shortName: 'SOC', maxMarks: 100, passMarks: 35, type: 'Core' }
       ],
       '8th Class': [
         { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
@@ -282,7 +264,7 @@
         { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'Physical Science', shortName: 'P.S', maxMarks: 50, passMarks: 18, type: 'Core' },
         { name: 'Bio Science', shortName: 'B.S', maxMarks: 50, passMarks: 18, type: 'Core' },
-        { name: 'Social', shortName: 'SOC', maxMarks: 100, passMarks: 35, type: 'Core' }
+        { name: 'Social Studies', shortName: 'SOC', maxMarks: 100, passMarks: 35, type: 'Core' }
       ],
       '9th Class': [
         { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
@@ -291,7 +273,7 @@
         { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'Physical Science', shortName: 'P.S', maxMarks: 50, passMarks: 18, type: 'Core' },
         { name: 'Bio Science', shortName: 'B.S', maxMarks: 50, passMarks: 18, type: 'Core' },
-        { name: 'Social', shortName: 'SOC', maxMarks: 100, passMarks: 35, type: 'Core' }
+        { name: 'Social Studies', shortName: 'SOC', maxMarks: 100, passMarks: 35, type: 'Core' }
       ],
       '10th Class': [
         { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
@@ -300,7 +282,7 @@
         { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'Physical Science', shortName: 'P.S', maxMarks: 50, passMarks: 18, type: 'Core' },
         { name: 'Bio Science', shortName: 'B.S', maxMarks: 50, passMarks: 18, type: 'Core' },
-        { name: 'Social', shortName: 'SOC', maxMarks: 100, passMarks: 35, type: 'Core' }
+        { name: 'Social Studies', shortName: 'SOC', maxMarks: 100, passMarks: 35, type: 'Core' }
       ]
     };
 
@@ -314,30 +296,55 @@
       { minPct: 0, maxPct: 39.99, grade: 'F', gpa: 0, desc: 'Fail' }
     ];
 
-        function getClassSubjectsDetailed(className) {
+    function getClassSubjectsDetailed(className, examCode) {
       if (!className) return DEFAULT_CLASS_SUBJECTS['1st Class'];
       const str = className.toString().trim().toLowerCase();
       const subjectMap = (typeof state !== 'undefined' && state && state.classSubjectsMap) ? state.classSubjectsMap : DEFAULT_CLASS_SUBJECTS;
       
-      if (str.includes('nursery')) return subjectMap['Nursery'] || DEFAULT_CLASS_SUBJECTS['Nursery'];
-      if (str.includes('lkg') || str.includes('l.k.g')) return subjectMap['LKG'] || DEFAULT_CLASS_SUBJECTS['LKG'];
-      if (str.includes('ukg') || str.includes('u.k.g')) return subjectMap['UKG'] || DEFAULT_CLASS_SUBJECTS['UKG'];
-      if (str.includes('10th') || str === '10' || str === 'x' || str.includes('class 10')) return subjectMap['10th Class'] || DEFAULT_CLASS_SUBJECTS['10th Class'];
-      if (str.includes('9th') || str === '9' || str === 'ix' || str.includes('class 9')) return subjectMap['9th Class'] || DEFAULT_CLASS_SUBJECTS['9th Class'];
-      if (str.includes('8th') || str === '8' || str === 'viii' || str.includes('class 8')) return subjectMap['8th Class'] || DEFAULT_CLASS_SUBJECTS['8th Class'];
-      if (str.includes('7th') || str === '7' || str === 'vii' || str.includes('class 7')) return subjectMap['7th Class'] || DEFAULT_CLASS_SUBJECTS['7th Class'];
-      if (str.includes('6th') || str === '6' || str === 'vi' || str.includes('class 6')) return subjectMap['6th Class'] || DEFAULT_CLASS_SUBJECTS['6th Class'];
-      if (str.includes('5th') || str === '5' || str === 'v' || str.includes('class 5')) return subjectMap['5th Class'] || DEFAULT_CLASS_SUBJECTS['5th Class'];
-      if (str.includes('4th') || str === '4' || str === 'iv' || str.includes('class 4')) return subjectMap['4th Class'] || DEFAULT_CLASS_SUBJECTS['4th Class'];
-      if (str.includes('3rd') || str === '3' || str === 'iii' || str.includes('class 3')) return subjectMap['3rd Class'] || DEFAULT_CLASS_SUBJECTS['3rd Class'];
-      if (str.includes('2nd') || str === '2' || str === 'ii' || str.includes('class 2')) return subjectMap['2nd Class'] || DEFAULT_CLASS_SUBJECTS['2nd Class'];
-      if (str.includes('1st') || str === '1' || str === 'i' || str.includes('class 1')) return subjectMap['1st Class'] || DEFAULT_CLASS_SUBJECTS['1st Class'];
+      let baseList = DEFAULT_CLASS_SUBJECTS['1st Class'];
+      if (str.includes('nursery')) baseList = subjectMap['Nursery'] || DEFAULT_CLASS_SUBJECTS['Nursery'];
+      else if (str.includes('lkg') || str.includes('l.k.g')) baseList = subjectMap['LKG'] || DEFAULT_CLASS_SUBJECTS['LKG'];
+      else if (str.includes('ukg') || str.includes('u.k.g')) baseList = subjectMap['UKG'] || DEFAULT_CLASS_SUBJECTS['UKG'];
+      else if (str.includes('10th') || str === '10' || str === 'x' || str.includes('class 10')) baseList = subjectMap['10th Class'] || DEFAULT_CLASS_SUBJECTS['10th Class'];
+      else if (str.includes('9th') || str === '9' || str === 'ix' || str.includes('class 9')) baseList = subjectMap['9th Class'] || DEFAULT_CLASS_SUBJECTS['9th Class'];
+      else if (str.includes('8th') || str === '8' || str === 'viii' || str.includes('class 8')) baseList = subjectMap['8th Class'] || DEFAULT_CLASS_SUBJECTS['8th Class'];
+      else if (str.includes('7th') || str === '7' || str === 'vii' || str.includes('class 7')) baseList = subjectMap['7th Class'] || DEFAULT_CLASS_SUBJECTS['7th Class'];
+      else if (str.includes('6th') || str === '6' || str === 'vi' || str.includes('class 6')) baseList = subjectMap['6th Class'] || DEFAULT_CLASS_SUBJECTS['6th Class'];
+      else if (str.includes('5th') || str === '5' || str === 'v' || str.includes('class 5')) baseList = subjectMap['5th Class'] || DEFAULT_CLASS_SUBJECTS['5th Class'];
+      else if (str.includes('4th') || str === '4' || str === 'iv' || str.includes('class 4')) baseList = subjectMap['4th Class'] || DEFAULT_CLASS_SUBJECTS['4th Class'];
+      else if (str.includes('3rd') || str === '3' || str === 'iii' || str.includes('class 3')) baseList = subjectMap['3rd Class'] || DEFAULT_CLASS_SUBJECTS['3rd Class'];
+      else if (str.includes('2nd') || str === '2' || str === 'ii' || str.includes('class 2')) baseList = subjectMap['2nd Class'] || DEFAULT_CLASS_SUBJECTS['2nd Class'];
+      else if (str.includes('1st') || str === '1' || str === 'i' || str.includes('class 1')) baseList = subjectMap['1st Class'] || DEFAULT_CLASS_SUBJECTS['1st Class'];
+      else baseList = DEFAULT_CLASS_SUBJECTS['1st Class'];
 
-      return DEFAULT_CLASS_SUBJECTS['1st Class'];
+      const currentEx = (examCode || (typeof state !== 'undefined' && state && state.selectedExamFilter) || 'FA1').toString().toUpperCase();
+      const isFA = currentEx.startsWith('FA');
+
+      return baseList.map(s => {
+        let maxM = 100;
+        let passM = 35;
+        if (isFA) {
+          maxM = 20;
+          passM = 7;
+        } else {
+          if (s.name === 'Physical Science' || s.name === 'Bio Science' || s.shortName === 'P.S' || s.shortName === 'B.S') {
+            maxM = 50;
+            passM = 18;
+          } else {
+            maxM = 100;
+            passM = 35;
+          }
+        }
+        return {
+          ...s,
+          maxMarks: maxM,
+          passMarks: passM
+        };
+      });
     }
 
-    function getClassSubjectsList(className) {
-      return getClassSubjectsDetailed(className).map(s => s.name);
+    function getClassSubjectsList(className, examCode) {
+      return getClassSubjectsDetailed(className, examCode).map(s => s.name);
     }
 
     function calculateGradeAndGPA(percentage) {
@@ -678,8 +685,8 @@
       ]),
       classFeeStructure: safeLoadJson('stv_fee_structure_v1', DEFAULT_CLASS_FEE_STRUCTURE),
       lastReceiptSequence: safeLoadJson('stv_receipt_seq_v1', 0),
-      classSubjectsMap: safeLoadJson('stv_class_subjects_v101', DEFAULT_CLASS_SUBJECTS),
-      examsList: safeLoadJson('stv_exams_v100', DEFAULT_EXAMS),
+      classSubjectsMap: DEFAULT_CLASS_SUBJECTS,
+      examsList: DEFAULT_EXAMS,
       gradeRules: safeLoadJson('stv_grade_rules_v1', DEFAULT_GRADE_RULES),
       examStatuses: safeLoadJson('stv_exam_statuses_v1', {}),
       marksAuditLogs: safeLoadJson('stv_marks_audit_v1', []),
@@ -713,8 +720,8 @@
       localStorage.setItem('stv_academic_history_v11', JSON.stringify(state.academicHistory));
       localStorage.setItem('stv_students_v11', JSON.stringify(state.students));
       localStorage.setItem('stv_fee_structure_v1', JSON.stringify(state.classFeeStructure));
-      localStorage.setItem('stv_class_subjects_v101', JSON.stringify(state.classSubjectsMap));
-      localStorage.setItem('stv_exams_v100', JSON.stringify(state.examsList));
+      localStorage.setItem('stv_class_subjects_v105', JSON.stringify(state.classSubjectsMap));
+      localStorage.setItem('stv_exams_v105', JSON.stringify(state.examsList));
       localStorage.setItem('stv_grade_rules_v1', JSON.stringify(state.gradeRules));
       localStorage.setItem('stv_exam_statuses_v1', JSON.stringify(state.examStatuses));
       localStorage.setItem('stv_marks_audit_v1', JSON.stringify(state.marksAuditLogs));
@@ -3738,9 +3745,9 @@
 
                 const currentClass = selectedG === 'all' ? (classStudents[0]?.grade || '10th Class') : selectedG;
                 const currentSec = selectedS === 'all' ? 'All Sections' : selectedS;
-                const subjectsDetailed = getClassSubjectsDetailed(currentClass);
+                const subjectsDetailed = getClassSubjectsDetailed(currentClass, currentExam);
                 const subjectsList = subjectsDetailed.map(s => s.name);
-                const examConfig = (state.examsList || DEFAULT_EXAMS).find(e => e.code === currentExam) || { code: currentExam, name: currentExam, maxMarks: 100 };
+                const examConfig = (state.examsList || DEFAULT_EXAMS).find(e => e.code === currentExam) || { code: currentExam, name: currentExam, maxMarks: currentExam.startsWith('FA') ? 20 : 100 };
                 const examKey = `${state.activeAcademicYear}_${currentExam}_${currentClass}_${currentSec}`;
                 const examStatus = state.examStatuses[examKey] || 'Open';
                 const isLocked = examStatus === 'Locked' || examStatus === 'Published';
@@ -3810,7 +3817,7 @@
                         <div>
                           <label class="block font-bold text-slate-700 mb-1">4. Select Examination (6 Core)</label>
                           <select onchange="state.selectedExamFilter = this.value; render();" class="w-full bg-indigo-900 text-white border border-indigo-950 rounded-xl px-3 py-2 font-black cursor-pointer">
-                            ${(state.examsList || DEFAULT_EXAMS).map(e => `<option value="${e.code}" ${currentExam === e.code ? 'selected' : ''}>${e.name || e.code} (Max ${e.maxMarks || 100})</option>`).join('')}
+                            ${DEFAULT_EXAMS.map(e => `<option value="${e.code}" ${currentExam === e.code ? 'selected' : ''}>${e.code} – ${e.name ? e.name.replace(/^[A-Z0-9]+\s*[–-]\s*/, '') : e.code} (Max ${e.maxMarks})</option>`).join('')}
                           </select>
                         </div>
                       </div>
@@ -4563,43 +4570,51 @@
 
       // MODAL 3: EDIT MARKS
       if (state.activeModal === 'editMarks' && state.modalStudent) {
-        const currentTerm = state.modalSelectedTerm || '1st Term Exam';
+        const currentTerm = state.modalSelectedTerm || 'FA1';
         const currentMarks = state.modalStudent.termMarks?.[currentTerm] || {};
+        const subjectsDetailed = getClassSubjectsDetailed(state.modalStudent.grade, currentTerm);
+        const isFA = currentTerm.startsWith('FA');
+        const termMax = isFA ? 20 : 100;
 
         return `
           <div class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-            <div class="bg-white border text-slate-900 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative">
+            <div class="bg-white border text-slate-900 rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl relative">
               <div class="flex justify-between items-center border-b pb-3">
-                <h3 class="text-base font-bold text-slate-900">Enter Term Subject Marks</h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700">✕</button>
+                <div>
+                  <h3 class="text-base font-bold text-slate-900">Enter Assessment Marks</h3>
+                  <p class="text-xs text-slate-500 font-semibold">${currentTerm} • Max ${termMax} Marks Per Subject</p>
+                </div>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700 font-bold text-lg">✕</button>
               </div>
 
               <form onsubmit="saveStudentMarks(event)" class="space-y-4 text-xs font-medium">
-                <div class="bg-slate-50 p-3 rounded-xl border">
-                  <p class="font-bold text-indigo-700">${state.modalStudent.name}</p>
-                  <p class="text-slate-500">${state.modalStudent.grade} - Section ${state.modalStudent.section}</p>
+                <div class="bg-slate-50 p-3 rounded-xl border flex justify-between items-center">
+                  <div>
+                    <p class="font-black text-indigo-900 text-sm">${state.modalStudent.name}</p>
+                    <p class="text-slate-500 font-semibold">${state.modalStudent.grade} - Section ${state.modalStudent.section} (Roll #${state.modalStudent.rollNo})</p>
+                  </div>
+                  <span class="px-3 py-1 bg-indigo-100 text-indigo-900 font-black rounded-xl text-xs">${currentTerm}</span>
                 </div>
 
                 <div>
                   <label class="block text-slate-700 mb-1 font-bold">Select Assessment Term</label>
                   <select id="examTermInput" onchange="changeModalTerm(this.value)" class="w-full bg-slate-50 border rounded-xl px-3 py-2 font-bold text-indigo-700">
-                    ${EXAM_TERMS.map(t => `<option value="${t}" ${currentTerm === t ? 'selected' : ''}>${t}</option>`).join('')}
+                    ${DEFAULT_EXAMS.map(e => `<option value="${e.code}" ${currentTerm === e.code ? 'selected' : ''}>${e.code} – ${e.name ? e.name.replace(/^[A-Z0-9]+\s*[–-]\s*/, '') : e.code} (Max ${e.maxMarks})</option>`).join('')}
                   </select>
                 </div>
 
                 <div class="space-y-2 border-t pt-3">
-                  <p class="font-bold text-slate-800">Marks for ${currentTerm} (Out of 100 Each):</p>
+                  <p class="font-bold text-slate-800">Marks for ${currentTerm} (Out of ${termMax} Each):</p>
                   <div class="grid grid-cols-2 gap-3">
-                    ${state.subjects.map(sub => `
+                    ${subjectsDetailed.map(subObj => `
                       <div>
-                        <label class="block text-slate-700 mb-1 font-bold">${sub}</label>
-                        <input type="number" id="sub_mark_${sub}" value="${currentMarks[sub] || 0}" class="w-full bg-slate-50 border rounded-xl px-3 py-1.5 font-bold text-slate-900" />
+                        <label class="block text-slate-700 mb-1 font-bold">${subObj.name} <span class="text-[10px] text-slate-400 font-normal">(Max ${subObj.maxMarks})</span></label>
+                        <input type="text" id="sub_mark_${subObj.name.replace(/\s+/g, '_')}" value="${currentMarks[subObj.name] !== undefined ? currentMarks[subObj.name] : ''}" placeholder="0" class="w-full bg-slate-50 border rounded-xl px-3 py-1.5 font-bold text-slate-900 text-sm" />
                       </div>
                     `).join('')}
                   </div>
                 </div>
 
-                <div class="flex justify-end space-x-2 pt-2">
                   <button type="button" onclick="closeModal()" class="bg-slate-100 px-4 py-2 rounded-xl text-xs font-bold text-slate-700">Cancel</button>
                   <button type="submit" class="bg-indigo-600 text-white px-5 py-2 rounded-xl text-xs font-bold shadow-md">Save Term Marks</button>
                 </div>
@@ -8832,18 +8847,21 @@
       if (!student) return;
 
       const currentClass = student.grade;
-      const subjectsList = getClassSubjectsList(currentClass);
-      const examConfig = (state.examsList || DEFAULT_EXAMS).find(e => e.code === (state.selectedExamFilter || 'FA1')) || { maxMarks: 100 };
-      const maxSubjectMarks = examConfig.maxMarks || 100;
-      const maxTotal = subjectsList.length * maxSubjectMarks;
+      const currentExam = state.selectedExamFilter || 'FA1';
+      const subjectsDetailed = getClassSubjectsDetailed(currentClass, currentExam);
+      
+      let maxTotal = 0;
+      subjectsDetailed.forEach(subObj => {
+        maxTotal += (subObj.maxMarks || (currentExam.startsWith('FA') ? 20 : 100));
+      });
 
       let obtainedSum = 0;
-      subjectsList.forEach(sub => {
-        const inp = document.getElementById(`mark_input_${studentId}_${sub.replace(/\s+/g, '_')}`);
+      subjectsDetailed.forEach(subObj => {
+        const inp = document.getElementById(`mark_input_${studentId}_${subObj.name.replace(/\s+/g, '_')}`);
         const v = inp ? inp.value.trim().toUpperCase() : '';
         if (v !== '' && v !== 'AB' && v !== 'ML' && v !== 'NA') {
           const n = parseFloat(v);
-          if (!isNaN(n) && n >= 0 && n <= maxSubjectMarks) {
+          if (!isNaN(n) && n >= 0 && n <= subObj.maxMarks) {
             obtainedSum += n;
           }
         }
@@ -8868,7 +8886,7 @@
 
       const resultEl = document.getElementById(`result_${studentId}`);
       if (resultEl) {
-        resultEl.innerHTML = `<span class="px-2.5 py-0.5 rounded-full text-[10px] ${gradeInfo.isPass ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-rose-100 text-rose-900 border border-rose-300'}">${gradeInfo.isPass ? '🟢 Pass' : '🔴 Fail'}</span>`;
+        resultEl.innerHTML = `<span class="px-2.5 py.5 rounded-full text-[10px] ${gradeInfo.isPass ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-rose-100 text-rose-900 border border-rose-300'}">${gradeInfo.isPass ? '🟢 Pass' : '🔴 Fail'}</span>`;
       }
     }
 
@@ -8907,7 +8925,7 @@
           const studentObj = state.students.find(s => s.id === studentId);
           if (studentObj) {
             const newExamMarks = { ...(studentObj.termMarks?.[examCode] || {}) };
-            const subjectsDetailed = getClassSubjectsDetailed(studentObj.grade);
+            const subjectsDetailed = getClassSubjectsDetailed(studentObj.grade, examCode);
 
             subjectsDetailed.forEach(subObj => {
               const subName = subObj.name;
@@ -8949,7 +8967,7 @@
         // Fallback for non-DOM save call
         state.students = state.students.map(s => {
           if (isSameClass(s.grade, grade) && isSameSection(s.section, section) && s.status !== 'Transferred') {
-            const subjectsList = getClassSubjectsList(s.grade);
+            const subjectsList = getClassSubjectsList(s.grade, examCode);
             const newExamMarks = { ...(s.termMarks?.[examCode] || {}) };
             subjectsList.forEach(sub => {
               const inp = document.getElementById(`mark_input_${s.id}_${sub.replace(/\s+/g, '_')}`);
@@ -9016,7 +9034,7 @@
 
     function downloadClassMarksTemplate(grade, section, examCode) {
       const classStudents = state.students.filter(s => isSameClass(s.grade, grade) && isSameSection(s.section, section) && s.status !== 'Transferred');
-      const subjectsList = getClassSubjectsList(grade === 'all' ? (classStudents[0]?.grade || '5th Class') : grade);
+      const subjectsList = getClassSubjectsList(grade === 'all' ? (classStudents[0]?.grade || '5th Class') : grade, examCode);
 
       const headers = ['S.NO', 'ADMN NO.', 'STUDENT NAME', 'FATHER NAME', ...subjectsList];
       const rowsData = classStudents.map((s, idx) => {
@@ -9361,10 +9379,11 @@
       e.preventDefault();
       if (!state.modalStudent) return;
       const term = document.getElementById('examTermInput').value;
+      const subjectsList = getClassSubjectsList(state.modalStudent.grade, term);
       const newTermMarks = {};
-      state.subjects.forEach(sub => {
-        const inp = document.getElementById(`sub_mark_${sub}`);
-        newTermMarks[sub] = inp ? (parseFloat(inp.value) || 0) : 0;
+      subjectsList.forEach(sub => {
+        const inp = document.getElementById(`sub_mark_${sub.replace(/\s+/g, '_')}`);
+        newTermMarks[sub] = inp ? inp.value.trim().toUpperCase() : '';
       });
 
       state.students = state.students.map(s => {
