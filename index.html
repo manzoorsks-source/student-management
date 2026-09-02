@@ -648,7 +648,7 @@
       }
     };
 
-    const APP_VERSION = 'stv_v2026_9th10th_fa120m_v8';
+    const APP_VERSION = 'stv_v2026_attendance_date_picker_v9';
     try {
       if (localStorage.getItem('stv_app_version') !== APP_VERSION) {
         localStorage.clear();
@@ -4239,48 +4239,150 @@
                     `;
                   })()}
                 ` : `
-                  <!-- DAILY QUICK ATTENDANCE REGISTER -->
-                  <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                    <div class="p-4 border-b bg-slate-50 flex justify-between items-center">
-                      <div>
-                        <h3 class="text-base font-bold text-slate-900">📋 Daily Student Attendance Register</h3>
-                        <p class="text-xs text-slate-500 font-medium">Quickly mark Present/Absent for students today</p>
-                      </div>
-                      <span class="text-xs font-bold text-indigo-900 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full">📅 Today's Date: ${getTodayFormattedDate()}</span>
-                    </div>
-                    <div class="overflow-x-auto">
-                      <table class="w-full text-left text-xs border-collapse">
-                        <thead>
-                          <tr class="bg-slate-100 border-b text-slate-600 uppercase font-bold">
-                            <th class="py-3 px-4">Roll / ID</th>
-                            <th class="py-3 px-4">Student Name</th>
-                            <th class="py-3 px-4">Class & Sec</th>
-                            <th class="py-3 px-4 text-center">Attendance Status</th>
-                            <th class="py-3 px-4 text-right">View Calendar</th>
-                          </tr>
-                        </thead>
-                        <tbody class="divide-y text-slate-800 font-medium">
-                          ${filteredStudents.map(s => {
-                            const st = state.attendanceMap[s.id] || 'Present';
-                            return `
-                              <tr class="hover:bg-slate-50">
-                                <td class="py-3 px-4 font-mono font-bold text-indigo-600">#${s.rollNo}</td>
-                                <td class="py-3 px-4 font-bold text-slate-900">${s.name}</td>
-                                <td class="py-3 px-4 font-bold text-indigo-700">${s.grade} - Sec ${s.section}</td>
-                                <td class="py-3 px-4 text-center space-x-2">
-                                  <button onclick="setAttendance('${s.id}', 'Present')" class="px-4 py-1.5 rounded-xl font-bold ${st === 'Present' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'}">🟢 Present</button>
-                                  <button onclick="setAttendance('${s.id}', 'Absent')" class="px-4 py-1.5 rounded-xl font-bold ${st === 'Absent' ? 'bg-rose-600 text-white' : 'bg-slate-100 text-slate-600'}">🔴 Absent</button>
-                                </td>
-                                <td class="py-3 px-4 text-right">
-                                  <button onclick="selectAttendanceStudent('${s.id}'); setAttendanceSubTab('calendar');" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 px-3 py-1 rounded-lg font-bold">📅 Calendar &rarr;</button>
-                                </td>
+                  <!-- DAILY QUICK ATTENDANCE REGISTER WITH DATE PICKER & BULK ACTIONS -->
+                  ${(() => {
+                    const curAttendanceDate = getSelectedAttendanceDate();
+                    const isDateToday = (curAttendanceDate === getTodayIsoDate());
+                    const curFormattedDate = formatIsoDateNice(curAttendanceDate);
+
+                    let presentCount = 0;
+                    let absentCount = 0;
+                    filteredStudents.forEach(s => {
+                      const st = getStudentAttendanceStatusForDate(s, curAttendanceDate);
+                      if (st === 'Absent') absentCount++;
+                      else presentCount++;
+                    });
+                    const totalStudentsCount = filteredStudents.length;
+                    const attendancePctForDate = totalStudentsCount > 0 ? ((presentCount / totalStudentsCount) * 100).toFixed(1) : '0.0';
+
+                    return `
+                      <div class="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm space-y-0">
+                        <!-- HEADER WITH TITLE & INTERACTIVE DATE PICKER -->
+                        <div class="p-4 md:p-5 border-b bg-slate-50/90 flex flex-wrap justify-between items-center gap-3">
+                          <div>
+                            <div class="flex items-center space-x-2">
+                              <span class="text-xl">📋</span>
+                              <h3 class="text-base md:text-lg font-black text-slate-900 font-display">Daily Student Attendance Register</h3>
+                            </div>
+                            <p class="text-xs text-slate-500 font-semibold mt-0.5">
+                              Mark Present/Absent for <strong>${curFormattedDate}</strong> • Changes save automatically
+                            </p>
+                          </div>
+                          
+                          <!-- INTERACTIVE DATE PICKER (CIRCLED AREA) -->
+                          <div class="flex flex-wrap items-center gap-2">
+                            <div class="flex items-center space-x-2 bg-indigo-50 border-2 border-indigo-200 px-3.5 py-1.5 rounded-2xl shadow-2xs">
+                              <span class="text-xs font-black text-indigo-950 flex items-center space-x-1">
+                                <span>📅</span>
+                                <span>Select Date:</span>
+                              </span>
+                              <input 
+                                type="date" 
+                                id="attendanceDatePickerInput" 
+                                value="${curAttendanceDate}" 
+                                max="${getTodayIsoDate()}" 
+                                onchange="changeAttendanceDate(this.value)" 
+                                class="bg-white border border-indigo-300 rounded-xl px-2.5 py-1 text-xs font-black text-indigo-900 focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-2xs"
+                              />
+                              ${isDateToday ? `
+                                <span class="bg-emerald-600 text-white text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow-2xs">Today</span>
+                              ` : `
+                                <button onclick="changeAttendanceDate('${getTodayIsoDate()}')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black px-2.5 py-1 rounded-full transition-all active:scale-95 shadow-2xs flex items-center space-x-1">
+                                  <span>↩️</span>
+                                  <span>Jump to Today</span>
+                                </button>
+                              `}
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- LIVE METRICS & BULK ACTION TOOLBAR -->
+                        <div class="p-3 bg-gradient-to-r from-indigo-50/70 via-sky-50/40 to-indigo-50/70 border-b flex flex-wrap justify-between items-center gap-3">
+                          <!-- METRICS SUMMARY CHIPS -->
+                          <div class="flex flex-wrap items-center gap-2 text-xs font-bold">
+                            <span class="bg-white border border-slate-200 text-slate-800 px-3 py-1.5 rounded-xl shadow-2xs">
+                              👥 Total Enrolled: <strong class="text-indigo-900 font-black">${totalStudentsCount}</strong>
+                            </span>
+                            <span class="bg-emerald-50 border border-emerald-300 text-emerald-900 px-3 py-1.5 rounded-xl shadow-2xs">
+                              🟢 Present: <strong class="text-emerald-700 font-black">${presentCount}</strong>
+                            </span>
+                            <span class="bg-rose-50 border border-rose-300 text-rose-900 px-3 py-1.5 rounded-xl shadow-2xs">
+                              🔴 Absent: <strong class="text-rose-600 font-black">${absentCount}</strong>
+                            </span>
+                            <span class="bg-sky-50 border border-sky-300 text-sky-900 px-3 py-1.5 rounded-xl shadow-2xs">
+                              📊 Attendance Rate: <strong class="text-sky-700 font-black">${attendancePctForDate}%</strong>
+                            </span>
+                          </div>
+
+                          <!-- ACTION BUTTONS: SAVE ALL & BULK MARK -->
+                          <div class="flex flex-wrap items-center gap-2">
+                            <button onclick="markAllStudentsPresentForDate('${curAttendanceDate}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-black shadow-sm active:scale-95 transition-all flex items-center space-x-1">
+                              <span>⚡</span>
+                              <span>Mark All Present</span>
+                            </button>
+                            <button onclick="saveAllAttendanceChanges()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1.5 rounded-xl text-xs font-black shadow-md active:scale-95 transition-all flex items-center space-x-1.5">
+                              <span>💾</span>
+                              <span>Save All Attendance Changes</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        <!-- STUDENT ATTENDANCE TABLE -->
+                        <div class="overflow-x-auto">
+                          <table class="w-full text-left text-xs border-collapse">
+                            <thead>
+                              <tr class="bg-slate-900 text-white uppercase font-bold text-[11px] border-b border-slate-800">
+                                <th class="py-3 px-4 w-12 text-center">#</th>
+                                <th class="py-3 px-4 w-28">Roll / Admn</th>
+                                <th class="py-3 px-4 min-w-[180px]">Student Name</th>
+                                <th class="py-3 px-4 min-w-[140px]">Class & Section</th>
+                                <th class="py-3 px-4 text-center min-w-[220px]">Attendance Status (${curFormattedDate})</th>
+                                <th class="py-3 px-4 text-right min-w-[160px]">Attendance History</th>
                               </tr>
-                            `;
-                          }).join('')}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+                            </thead>
+                            <tbody class="divide-y text-slate-800 font-medium">
+                              ${filteredStudents.length > 0 ? filteredStudents.map((s, idx) => {
+                                const st = getStudentAttendanceStatusForDate(s, curAttendanceDate);
+                                return `
+                                  <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="py-3 px-4 text-center font-bold text-slate-400">${idx + 1}</td>
+                                    <td class="py-3 px-4 font-mono font-bold text-indigo-700">#${s.rollNo} <span class="text-slate-400 font-normal">(${s.admnNo || s.id})</span></td>
+                                    <td class="py-3 px-4 font-black text-slate-900 text-sm">${s.name}</td>
+                                    <td class="py-3 px-4 font-bold text-indigo-900 bg-indigo-50/50">${s.grade} - Sec ${s.section}</td>
+                                    <td class="py-3 px-4 text-center space-x-2">
+                                      <button 
+                                        onclick="setAttendance('${s.id}', 'Present', '${curAttendanceDate}')" 
+                                        class="px-4 py-1.5 rounded-xl text-xs font-black transition-all ${st === 'Present' ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-300' : 'bg-slate-100 text-slate-600 hover:bg-emerald-50 hover:text-emerald-800'}"
+                                      >
+                                        ${st === 'Present' ? '✅ 🟢 Present' : '🟢 Present'}
+                                      </button>
+                                      <button 
+                                        onclick="setAttendance('${s.id}', 'Absent', '${curAttendanceDate}')" 
+                                        class="px-4 py-1.5 rounded-xl text-xs font-black transition-all ${st === 'Absent' ? 'bg-rose-600 text-white shadow-sm ring-2 ring-rose-300' : 'bg-slate-100 text-slate-600 hover:bg-rose-50 hover:text-rose-800'}"
+                                      >
+                                        ${st === 'Absent' ? '❌ 🔴 Absent' : '🔴 Absent'}
+                                      </button>
+                                    </td>
+                                    <td class="py-3 px-4 text-right">
+                                      <button onclick="selectAttendanceStudent('${s.id}'); setAttendanceSubTab('calendar');" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 px-3 py-1.5 rounded-xl font-bold text-xs transition-all flex items-center space-x-1 inline-flex">
+                                        <span>📅</span> <span>View Calendar &rarr;</span>
+                                      </button>
+                                    </td>
+                                  </tr>
+                                `;
+                              }).join('') : `
+                                <tr>
+                                  <td colspan="6" class="p-8 text-center text-slate-400 font-bold italic">
+                                    No student records found matching current class & section filters.
+                                  </td>
+                                </tr>
+                              `}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    `;
+                  })()}
                 `}
               </div>
             ` : ''}
@@ -9894,9 +9996,84 @@
       }
     }
 
-    function setAttendance(id, st) {
-      state.attendanceMap[id] = st;
+    function getSelectedAttendanceDate() {
+      return state.selectedAttendanceDate || getTodayIsoDate();
+    }
+
+    function changeAttendanceDate(newDateStr) {
+      if (!newDateStr) return;
+      state.selectedAttendanceDate = newDateStr;
       saveState();
+    }
+
+    function formatIsoDateNice(isoStr) {
+      if (!isoStr) return getTodayFormattedDate();
+      const parts = isoStr.split('-');
+      if (parts.length === 3) {
+        const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+      }
+      return isoStr;
+    }
+
+    function getStudentAttendanceStatusForDate(student, dateStr) {
+      if (!student) return 'Present';
+      const dStr = dateStr || getSelectedAttendanceDate();
+      if (student.attendanceHistory && student.attendanceHistory[dStr]) {
+        return student.attendanceHistory[dStr].status || 'Present';
+      }
+      if (dStr === getTodayIsoDate() && state.attendanceMap && state.attendanceMap[student.id]) {
+        return state.attendanceMap[student.id];
+      }
+      return 'Present';
+    }
+
+    function setAttendance(id, st, targetDate) {
+      const dStr = targetDate || getSelectedAttendanceDate();
+      const student = state.students.find(s => s.id === id);
+      if (student) {
+        if (!student.attendanceHistory) student.attendanceHistory = {};
+        student.attendanceHistory[dStr] = {
+          date: dStr,
+          status: st,
+          reason: st === 'Absent' ? (student.attendanceHistory[dStr]?.reason || 'Absent / Sick Leave') : '',
+          leaveApproved: false,
+          updatedBy: state.currentUser?.username || 'Staff',
+          updatedAt: new Date().toISOString()
+        };
+      }
+      if (dStr === getTodayIsoDate()) {
+        state.attendanceMap[id] = st;
+      }
+      saveState();
+    }
+
+    function markAllStudentsPresentForDate(targetDate) {
+      const dStr = targetDate || getSelectedAttendanceDate();
+      const filtered = getFilteredStudents();
+      filtered.forEach(s => {
+        if (!s.attendanceHistory) s.attendanceHistory = {};
+        s.attendanceHistory[dStr] = {
+          date: dStr,
+          status: 'Present',
+          reason: '',
+          updatedBy: state.currentUser?.username || 'Staff',
+          updatedAt: new Date().toISOString()
+        };
+        if (dStr === getTodayIsoDate()) {
+          state.attendanceMap[s.id] = 'Present';
+        }
+      });
+      saveState();
+      showToast(`🟢 All ${filtered.length} students marked Present for ${formatIsoDateNice(dStr)}!`);
+    }
+
+    function saveAllAttendanceChanges() {
+      const dStr = getSelectedAttendanceDate();
+      saveState();
+      showToast(`✅ All attendance changes for ${formatIsoDateNice(dStr)} saved successfully to Database & Cloud!`);
     }
 
     function addTask(e) {
