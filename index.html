@@ -4900,142 +4900,124 @@
           };
         });
 
-        // Dynamic Baseline Mark Generator (76% to 94% academic performance) so every student has realistic marks if not yet manually entered
-        const getDefaultBaselineMark = (student, examCode, subItem) => {
-          let hash = 0;
-          const str = (student?.id || 'STD') + (subItem?.key || subItem?.name || '') + (examCode || 'FA1');
-          for (let i = 0; i < str.length; i++) {
-            hash = ((hash << 5) - hash) + str.charCodeAt(i);
-            hash |= 0;
-          }
-          const positiveHash = Math.abs(hash);
-          // High-performing academic percentage between 76% and 94%
-          const pct = 76 + (positiveHash % 19); 
-          
-          if (examCode.toUpperCase().startsWith('FA')) {
-            const faLimit = subItem.faMax || ((subItem.isPS || subItem.isBS) ? 10 : 20);
-            return Math.max(1, Math.round((pct / 100) * faLimit));
-          } else {
-            const saLimit = subItem.saMax || ((subItem.isPS || subItem.isBS) ? 40 : 80);
-            return Math.max(1, Math.round((pct / 100) * saLimit));
-          }
-        };
+        // Strict Subject Mark Extractor (extracts ONLY entered marks, no fake generation)
+        const getStudentSubjectEntry = (student, exKey, subItem) => {
+          if (!student || !student.termMarks) return { entered: false, mark: null, text: '--' };
+          const exUpper = (exKey || '').toUpperCase().replace(/[\s\-_]/g, '');
 
-        // Compute Marks Data for all 6 exams with smart aliases, entered overrides, & fallback
-        const getMarkForExam = (exKey, subItem) => {
-          if (!s) return getDefaultBaselineMark(s || {}, exKey, subItem);
-          const exUpper = exKey.toUpperCase().replace(/[\s\-_]/g, '');
-          
-          // Check if term data exists in s.termMarks
           let tData = null;
-          if (s.termMarks) {
-            for (const k in s.termMarks) {
-              const cleanK = k.toUpperCase().replace(/[\s\-_]/g, '');
-              if (cleanK === exUpper) { tData = s.termMarks[k]; break; }
-              if (exUpper === 'FA1' && (cleanK === '1STTERMEXAM' || cleanK === '1STTERM' || cleanK === 'FA-1' || cleanK === 'FA1')) { tData = s.termMarks[k]; break; }
-              if (exUpper === 'FA2' && (cleanK === 'FA-2' || cleanK === 'FA2')) { tData = s.termMarks[k]; break; }
-              if (exUpper === 'SA1' && (cleanK === '2NDTERMEXAM' || cleanK === '2NDTERM' || cleanK === 'SA-1' || cleanK === 'SA1' || cleanK === 'HALFYEARLY')) { tData = s.termMarks[k]; break; }
-              if (exUpper === 'FA3' && (cleanK === 'FA-3' || cleanK === 'FA3')) { tData = s.termMarks[k]; break; }
-              if (exUpper === 'FA4' && (cleanK === 'FA-4' || cleanK === 'FA4')) { tData = s.termMarks[k]; break; }
-              if (exUpper === 'SA2' && (cleanK === 'FINALTERMEXAM' || cleanK === 'FINALTERM' || cleanK === 'SA-2' || cleanK === 'SA2' || cleanK === 'ANNUAL')) { tData = s.termMarks[k]; break; }
-            }
+          for (const k in student.termMarks) {
+            const cleanK = k.toUpperCase().replace(/[\s\-_]/g, '');
+            if (cleanK === exUpper) { tData = student.termMarks[k]; break; }
+            if (exUpper === 'FA1' && (cleanK === '1STTERMEXAM' || cleanK === '1STTERM' || cleanK === 'FA-1' || cleanK === 'FA1' || cleanK === 'FORMATIVEASSESSMENT1')) { tData = student.termMarks[k]; break; }
+            if (exUpper === 'FA2' && (cleanK === 'FA-2' || cleanK === 'FA2' || cleanK === 'FORMATIVEASSESSMENT2' || cleanK === '2NDFORMATIVE')) { tData = student.termMarks[k]; break; }
+            if (exUpper === 'SA1' && (cleanK === '2NDTERMEXAM' || cleanK === '2NDTERM' || cleanK === 'SA-1' || cleanK === 'SA1' || cleanK === 'SUMMATIVEASSESSMENT1' || cleanK === 'HALFYEARLY')) { tData = student.termMarks[k]; break; }
+            if (exUpper === 'FA3' && (cleanK === 'FA-3' || cleanK === 'FA3' || cleanK === 'FORMATIVEASSESSMENT3' || cleanK === '3RDFORMATIVE')) { tData = student.termMarks[k]; break; }
+            if (exUpper === 'FA4' && (cleanK === 'FA-4' || cleanK === 'FA4' || cleanK === 'FORMATIVEASSESSMENT4' || cleanK === '4THFORMATIVE')) { tData = student.termMarks[k]; break; }
+            if (exUpper === 'SA2' && (cleanK === 'FINALTERMEXAM' || cleanK === 'FINALTERM' || cleanK === 'SA-2' || cleanK === 'SA2' || cleanK === 'SUMMATIVEASSESSMENT2' || cleanK === 'ANNUALEXAM')) { tData = student.termMarks[k]; break; }
           }
-          
-          let rawMark = null;
-          if (tData) {
-            if (tData[subItem.key] !== undefined && tData[subItem.key] !== '' && tData[subItem.key] !== null) {
-              rawMark = tData[subItem.key];
-            } else {
-              const targetKey = subItem.key.toLowerCase().replace(/[\s\-_().]/g, '');
-              for (const subName in tData) {
-                const cleanSub = subName.toLowerCase().replace(/[\s\-_().]/g, '');
-                if (cleanSub === targetKey || cleanSub.includes(targetKey) || targetKey.includes(cleanSub)) {
-                  rawMark = tData[subName];
-                  break;
-                }
-                if ((targetKey.includes('telugu') || targetKey.includes('1stlang')) && cleanSub.includes('telugu')) { rawMark = tData[subName]; break; }
-                if ((targetKey.includes('hindi') || targetKey.includes('2ndlang')) && cleanSub.includes('hindi')) { rawMark = tData[subName]; break; }
-                if ((targetKey.includes('english') || targetKey.includes('3rdlang')) && cleanSub.includes('english')) { rawMark = tData[subName]; break; }
-                if ((targetKey.includes('math') || targetKey.includes('maths')) && cleanSub.includes('math')) { rawMark = tData[subName]; break; }
-                if (targetKey.includes('social') && cleanSub.includes('social')) { rawMark = tData[subName]; break; }
-                if (targetKey.includes('science') && cleanSub.includes('science')) { rawMark = tData[subName]; break; }
-              }
-            }
-          }
-          
-          let num = parseFloat(rawMark);
-          if (!isNaN(num) && num > 0) {
-            if (exUpper.startsWith('FA') && num > subItem.faMax && num <= 100) {
-              return Math.round((num / 100) * subItem.faMax);
-            }
-            if (exUpper.startsWith('SA') && num > subItem.saMax && num <= 100) {
-              return Math.round((num / 100) * subItem.saMax);
-            }
-            return Math.round(num);
-          }
-          
-          // Return default baseline mark if mark has not been manually entered yet
-          return getDefaultBaselineMark(s, exUpper, subItem);
-        };
 
-        // Precalculate all exam marks
-        const examData = {};
-        ['FA1', 'FA2', 'FA3', 'FA4', 'SA1', 'SA2'].forEach(ex => {
-          examData[ex] = {};
-          subjectsForCard.forEach(sub => {
-            examData[ex][sub.key] = getMarkForExam(ex, sub);
-          });
-        });
+          if (!tData) return { entered: false, mark: null, text: '--' };
+
+          let rawMark = undefined;
+          if (tData[subItem.key] !== undefined && tData[subItem.key] !== '' && tData[subItem.key] !== null && tData[subItem.key] !== 'NA') {
+            rawMark = tData[subItem.key];
+          } else {
+            const targetKey = (subItem.key || subItem.name || '').toLowerCase().replace(/[\s\-_().]/g, '');
+            for (const subName in tData) {
+              if (tData[subName] === undefined || tData[subName] === '' || tData[subName] === null || tData[subName] === 'NA') continue;
+              const cleanSub = subName.toLowerCase().replace(/[\s\-_().]/g, '');
+              if (cleanSub === targetKey || cleanSub.includes(targetKey) || targetKey.includes(cleanSub)) {
+                rawMark = tData[subName];
+                break;
+              }
+              if ((targetKey.includes('telugu') || targetKey.includes('1stlang')) && cleanSub.includes('telugu')) { rawMark = tData[subName]; break; }
+              if ((targetKey.includes('hindi') || targetKey.includes('2ndlang')) && cleanSub.includes('hindi')) { rawMark = tData[subName]; break; }
+              if ((targetKey.includes('english') || targetKey.includes('3rdlang')) && cleanSub.includes('english')) { rawMark = tData[subName]; break; }
+              if ((targetKey.includes('math') || targetKey.includes('maths')) && cleanSub.includes('math')) { rawMark = tData[subName]; break; }
+              if (targetKey.includes('social') && cleanSub.includes('social')) { rawMark = tData[subName]; break; }
+              if (targetKey.includes('science') && cleanSub.includes('science')) { rawMark = tData[subName]; break; }
+            }
+          }
+
+          if (rawMark === undefined || rawMark === '' || rawMark === null || rawMark === 'NA') {
+            return { entered: false, mark: null, text: '--' };
+          }
+
+          if (rawMark === 'AB' || rawMark === 'ML') {
+            return { entered: true, isAbsent: true, mark: 0, text: rawMark };
+          }
+
+          let num = parseFloat(rawMark);
+          if (isNaN(num)) return { entered: false, mark: null, text: '--' };
+
+          if (exUpper.startsWith('FA') && num > subItem.faMax && num <= 100) {
+            num = Math.round((num / 100) * subItem.faMax);
+          } else if (exUpper.startsWith('SA') && num > subItem.saMax && num <= 100) {
+            num = Math.round((num / 100) * subItem.saMax);
+          } else {
+            num = Math.round(num);
+          }
+
+          return { entered: true, isAbsent: false, mark: num, text: num.toString() };
+        };
 
         // 1. COMBINED ANNUAL CARD HTML GENERATOR
         const renderCombinedCardHtml = () => {
           let grandCombinedObtained = 0;
           let grandCombinedMax = 0;
+          let enteredSubjectCount = 0;
 
           const combinedSubjectRows = subjectsForCard.map(item => {
-            const subKey = item.key;
-            
-            // 4 FA average
-            let faSum = 0;
-            let faCount = 0;
-            ['FA1', 'FA2', 'FA3', 'FA4'].forEach(ex => {
-              const v = parseFloat(examData[ex][subKey]);
-              if (!isNaN(v) && v > 0) { faSum += v; faCount++; }
-            });
-            let faAvg = faCount > 0 ? (faSum / faCount) : 0;
-            if (faAvg === 0) {
-              const sa1Val = parseFloat(examData['SA1'][subKey]) || 0;
-              if (sa1Val > 0) faAvg = Math.round((sa1Val / item.maxMarks) * item.faMax);
+            // Find all entered FAs
+            const faEntries = ['FA1', 'FA2', 'FA3', 'FA4']
+              .map(fa => getStudentSubjectEntry(s, fa, item))
+              .filter(e => e.entered);
+            const faAvg = faEntries.length > 0 ? Math.round(faEntries.reduce((sum, e) => sum + e.mark, 0) / faEntries.length) : null;
+
+            // Find all entered SAs
+            const saEntries = ['SA1', 'SA2']
+              .map(sa => getStudentSubjectEntry(s, sa, item))
+              .filter(e => e.entered);
+            const saVal = saEntries.length > 0 ? Math.round(saEntries.reduce((sum, e) => sum + e.mark, 0) / saEntries.length) : null;
+
+            let total100 = null;
+            let subGrade = '--';
+            let subGp = '--';
+
+            if (faAvg !== null && saVal !== null) {
+              total100 = Math.round(faAvg + saVal);
+            } else if (faAvg !== null && saVal === null) {
+              total100 = Math.round((faAvg / item.faMax) * item.maxMarks);
+            } else if (faAvg === null && saVal !== null) {
+              total100 = Math.round((saVal / item.saMax) * item.maxMarks);
             }
 
-            // SA marks (SA1 + SA2 average or SA1)
-            const rawSa1 = parseFloat(examData['SA1'][subKey]) || 0;
-            const rawSa2 = parseFloat(examData['SA2'][subKey]) || 0;
-            const saRaw = rawSa2 > 0 ? (rawSa1 + rawSa2) / 2 : rawSa1;
-            const saVal = saRaw > item.saMax ? Math.round((saRaw / item.maxMarks) * item.saMax) : saRaw;
-
-            const total100 = Math.round(faAvg + saVal);
-            const gradeInfo = calculateGradeAndGPA((total100 / item.maxMarks) * 100);
-
-            if (!item.isOptional) {
-              grandCombinedObtained += total100;
-              grandCombinedMax += item.maxMarks;
+            if (total100 !== null) {
+              const gInfo = calculateGradeAndGPA((total100 / item.maxMarks) * 100);
+              subGrade = gInfo.grade;
+              subGp = gInfo.gpa;
+              if (!item.isOptional) {
+                grandCombinedObtained += total100;
+                grandCombinedMax += item.maxMarks;
+                enteredSubjectCount++;
+              }
             }
 
             return {
               label: item.label,
               isOptional: item.isOptional,
-              faAvg: Math.round(faAvg),
-              saVal: Math.round(saVal),
-              total100: total100,
-              maxMarks: item.maxMarks,
-              grade: gradeInfo.grade,
-              gp: gradeInfo.gpa
+              faAvg: faAvg !== null ? faAvg : '--',
+              saVal: saVal !== null ? saVal : '--',
+              total100: total100 !== null ? `${total100} / ${item.maxMarks}` : `-- / ${item.maxMarks}`,
+              grade: subGrade,
+              gp: subGp
             };
           });
 
-          const overallCombinedPct = grandCombinedMax > 0 ? ((grandCombinedObtained / grandCombinedMax) * 100).toFixed(1) : '0.0';
-          const overallCombinedGradeInfo = calculateGradeAndGPA(overallCombinedPct);
+          const hasEnteredMarks = enteredSubjectCount > 0 && grandCombinedMax > 0;
+          const overallCombinedPct = hasEnteredMarks ? ((grandCombinedObtained / grandCombinedMax) * 100).toFixed(1) : '0.0';
+          const overallCombinedGradeInfo = hasEnteredMarks ? calculateGradeAndGPA(overallCombinedPct) : { grade: '--', gpa: '--', isPass: false };
 
           return `
             <div class="bg-rose-50/40 border-2 border-rose-900 rounded-3xl p-6 space-y-5 shadow-sm text-xs font-semibold">
@@ -5085,7 +5067,7 @@
                         <td class="p-2 border-r border-slate-300 text-left font-extrabold text-slate-900 bg-slate-50">${row.label}</td>
                         <td class="p-2 border-r border-slate-300 font-mono text-slate-700">${row.faAvg}</td>
                         <td class="p-2 border-r border-slate-300 font-mono text-slate-700">${row.saVal}</td>
-                        <td class="p-2 border-r border-slate-300 font-mono font-black text-rose-950 bg-amber-50">${row.total100} / ${row.maxMarks}</td>
+                        <td class="p-2 border-r border-slate-300 font-mono font-black text-rose-950 bg-amber-50">${row.total100}</td>
                         <td class="p-2 border-r border-slate-300 font-black text-rose-900 bg-rose-50/60">${row.grade}</td>
                         <td class="p-2 font-mono font-black text-sky-900 bg-sky-50/60">${row.gp}</td>
                       </tr>
@@ -5094,9 +5076,9 @@
                       <td colspan="2" class="p-2 text-left uppercase font-black tracking-wider">GRAND TOTAL</td>
                       <td class="p-2 font-mono text-rose-900 italic">--</td>
                       <td class="p-2 font-mono text-rose-900 italic">--</td>
-                      <td class="p-2 font-mono text-base font-black text-rose-950 bg-amber-100">${grandCombinedObtained} / ${grandCombinedMax}</td>
+                      <td class="p-2 font-mono text-base font-black text-rose-950 bg-amber-100">${hasEnteredMarks ? `${grandCombinedObtained} / ${grandCombinedMax}` : '--'}</td>
                       <td class="p-2 text-base font-black text-rose-900">${overallCombinedGradeInfo.grade}</td>
-                      <td class="p-2 font-mono text-base font-black text-sky-900 bg-sky-100">${overallCombinedGradeInfo.gpa} GP</td>
+                      <td class="p-2 font-mono text-base font-black text-sky-900 bg-sky-100">${hasEnteredMarks ? `${overallCombinedGradeInfo.gpa} GP` : '--'}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -5124,13 +5106,13 @@
                 <div class="bg-white p-3 rounded-2xl border border-rose-300 space-y-2 text-center">
                   <h4 class="font-black text-rose-900 uppercase text-[11px] border-b pb-1">ACADEMIC RESULT</h4>
                   <div class="grid grid-cols-3 gap-1 text-[10px] font-black">
-                    <div class="p-2 rounded-xl border ${overallCombinedGradeInfo.isPass ? 'bg-emerald-100 text-emerald-900 border-emerald-400 font-black' : 'bg-slate-100 text-slate-400'}">PASSED</div>
-                    <div class="p-2 rounded-xl border ${overallCombinedGradeInfo.isPass ? 'bg-emerald-600 text-white border-emerald-700 font-black shadow-sm' : 'bg-slate-100 text-slate-400'}">PROMOTED</div>
-                    <div class="p-2 rounded-xl border ${!overallCombinedGradeInfo.isPass ? 'bg-rose-600 text-white border-rose-700 font-black' : 'bg-slate-100 text-slate-400'}">DETAINED</div>
+                    <div class="p-2 rounded-xl border ${hasEnteredMarks && overallCombinedGradeInfo.isPass ? 'bg-emerald-100 text-emerald-900 border-emerald-400 font-black' : 'bg-slate-100 text-slate-400'}">PASSED</div>
+                    <div class="p-2 rounded-xl border ${hasEnteredMarks && overallCombinedGradeInfo.isPass ? 'bg-emerald-600 text-white border-emerald-700 font-black shadow-sm' : 'bg-slate-100 text-slate-400'}">PROMOTED</div>
+                    <div class="p-2 rounded-xl border ${hasEnteredMarks && !overallCombinedGradeInfo.isPass ? 'bg-rose-600 text-white border-rose-700 font-black' : 'bg-slate-100 text-slate-400'}">DETAINED</div>
                   </div>
                   <div class="bg-rose-900 text-white p-2 rounded-xl space-y-0.5 mt-2">
                     <span class="text-[10px] text-rose-200 font-bold uppercase">CUMULATIVE GRADE POINT AVERAGE</span>
-                    <p class="text-xl font-black font-mono text-amber-300">${overallCombinedGradeInfo.gpa} CGPA</p>
+                    <p class="text-xl font-black font-mono text-amber-300">${hasEnteredMarks ? `${overallCombinedGradeInfo.gpa} CGPA` : 'Pending / In Progress'}</p>
                   </div>
                 </div>
 
@@ -5172,39 +5154,53 @@
 
         // 2. FORMATIVE ASSESSMENT CARD HTML GENERATOR (FA1, FA2, FA3, FA4)
         const renderFaCardHtml = (faCode) => {
-          const faMarksData = examData[faCode] || {};
           let faObtainedSum = 0;
           let faMaxSum = 0;
+          let enteredCount = 0;
 
           const faRows = subjectsForCard.map((item, idx) => {
-            const v = parseFloat(faMarksData[item.key]);
-            const obt = !isNaN(v) ? v : 0;
+            const entry = getStudentSubjectEntry(s, faCode, item);
             const faLimit = item.faMax;
-            if (!item.isOptional) {
-              faObtainedSum += obt;
-              faMaxSum += faLimit;
+
+            if (entry.entered) {
+              const obt = entry.mark;
+              if (!item.isOptional) {
+                faObtainedSum += obt;
+                faMaxSum += faLimit;
+                enteredCount++;
+              }
+
+              // Component breakdown (Read & Reflection, Written Work, Project Work, Slip Test)
+              const slipTest = Math.round(obt * 0.25);
+              const project = Math.round(obt * 0.25);
+              const written = Math.round(obt * 0.25);
+              const readRef = obt - (slipTest + project + written);
+              const subGrade = calculateGradeAndGPA((obt / faLimit) * 100).grade;
+
+              return {
+                label: item.label,
+                isOptional: item.isOptional,
+                readRef, written, project, slipTest,
+                totalObt: `${obt} / ${faLimit}`,
+                grade: subGrade
+              };
+            } else {
+              return {
+                label: item.label,
+                isOptional: item.isOptional,
+                readRef: '--',
+                written: '--',
+                project: '--',
+                slipTest: '--',
+                totalObt: `-- / ${faLimit}`,
+                grade: '--'
+              };
             }
-
-            // Component breakdown matching Image 2 (Read & Reflection, Written Work, Project Work, Slip Test)
-            const slipTest = Math.round(obt * 0.25);
-            const project = Math.round(obt * 0.25);
-            const written = Math.round(obt * 0.25);
-            const readRef = obt - (slipTest + project + written);
-
-            const subGrade = calculateGradeAndGPA((obt / faLimit) * 100).grade;
-
-            return {
-              label: item.label,
-              isOptional: item.isOptional,
-              readRef, written, project, slipTest,
-              totalObt: obt,
-              faMax: faLimit,
-              grade: subGrade
-            };
           });
 
-          const faPct = faMaxSum > 0 ? ((faObtainedSum / faMaxSum) * 100).toFixed(1) : '0.0';
-          const faGradeInfo = calculateGradeAndGPA(faPct);
+          const hasMarks = enteredCount > 0 && faMaxSum > 0;
+          const faPct = hasMarks ? ((faObtainedSum / faMaxSum) * 100).toFixed(1) : '0.0';
+          const faGradeInfo = hasMarks ? calculateGradeAndGPA(faPct) : { grade: '--', gpa: '--' };
 
           return `
             <div class="bg-sky-50/40 border-2 border-sky-800 rounded-3xl p-6 space-y-5 shadow-sm text-xs font-semibold">
@@ -5257,14 +5253,14 @@
                         <td class="p-2 border-r border-slate-300 font-mono text-slate-700">${row.written}</td>
                         <td class="p-2 border-r border-slate-300 font-mono text-slate-700">${row.project}</td>
                         <td class="p-2 border-r border-slate-300 font-mono text-slate-700">${row.slipTest}</td>
-                        <td class="p-2 border-r border-slate-300 font-mono font-black text-emerald-950 bg-emerald-50">${row.totalObt} / ${row.faMax}</td>
+                        <td class="p-2 border-r border-slate-300 font-mono font-black text-emerald-950 bg-emerald-50">${row.totalObt}</td>
                         <td class="p-2 font-black text-sky-950 bg-sky-50">${row.grade}</td>
                       </tr>
                     `).join('')}
                     <tr class="bg-sky-100 text-sky-950 font-black text-center border-t-2 border-sky-800">
                       <td colspan="2" class="p-2 text-left uppercase font-black tracking-wider">TOTAL FORMATIVE SCORE</td>
-                      <td colspan="4" class="p-2 text-sky-800">Cumulative Component Aggregate</td>
-                      <td class="p-2 font-mono text-base font-black text-emerald-950 bg-emerald-100">${faObtainedSum} / ${faMaxSum}</td>
+                      <td colspan="4" class="p-2 text-sky-800 font-medium">Cumulative Component Aggregate</td>
+                      <td class="p-2 font-mono text-base font-black text-emerald-950 bg-emerald-100">${hasMarks ? `${faObtainedSum} / ${faMaxSum}` : '--'}</td>
                       <td class="p-2 text-base font-black text-sky-950 bg-sky-200">${faGradeInfo.grade}</td>
                     </tr>
                   </tbody>
@@ -5292,8 +5288,13 @@
                   <h4 class="font-black text-sky-900 uppercase text-[11px] border-b pb-1">${faCode} RESULT SUMMARY</h4>
                   <div class="bg-sky-900 text-white p-3 rounded-2xl space-y-1">
                     <span class="text-[10px] text-sky-200 font-bold uppercase">PERCENTAGE & GRADE</span>
-                    <p class="text-2xl font-black font-mono text-amber-300">${faPct}% Marks</p>
-                    <p class="text-sm font-black text-emerald-300">Grade: ${faGradeInfo.grade} (${faGradeInfo.gpa} GP)</p>
+                    ${hasMarks ? `
+                      <p class="text-2xl font-black font-mono text-amber-300">${faPct}% Marks</p>
+                      <p class="text-sm font-black text-emerald-300">Grade: ${faGradeInfo.grade} (${faGradeInfo.gpa} GP)</p>
+                    ` : `
+                      <p class="text-base font-bold text-amber-300 mt-1">Marks Not Entered Yet</p>
+                      <p class="text-[11px] text-sky-200 font-semibold">${faCode} result pending</p>
+                    `}
                   </div>
                 </div>
 
@@ -5307,10 +5308,10 @@
                     oninput="updateStudentTeacherRemarks('${s.id}', '${faCode}', this.value)"
                     placeholder="Type ${faCode} teacher remarks here (or leave blank to handwrite)..."
                     class="w-full bg-sky-50/40 border border-sky-200 focus:bg-white rounded-xl p-2 text-xs font-semibold text-slate-900 min-h-[50px] print:hidden resize-none"
-                  >${faMarksData.teacherRemarks || s.termRemarks?.[faCode]?.teacherRemarks || s.teacherRemarks || ''}</textarea>
+                  >${s.termMarks?.[faCode]?.teacherRemarks || s.termRemarks?.[faCode]?.teacherRemarks || s.teacherRemarks || ''}</textarea>
                   <div class="hidden print:block pt-1 space-y-2">
-                    ${(faMarksData.teacherRemarks || s.termRemarks?.[faCode]?.teacherRemarks || s.teacherRemarks) ? `
-                      <p class="text-[11px] text-slate-900 italic font-bold border-b border-slate-300 pb-1">"${faMarksData.teacherRemarks || s.termRemarks?.[faCode]?.teacherRemarks || s.teacherRemarks}"</p>
+                    ${(s.termMarks?.[faCode]?.teacherRemarks || s.termRemarks?.[faCode]?.teacherRemarks || s.teacherRemarks) ? `
+                      <p class="text-[11px] text-slate-900 italic font-bold border-b border-slate-300 pb-1">"${s.termMarks?.[faCode]?.teacherRemarks || s.termRemarks?.[faCode]?.teacherRemarks || s.teacherRemarks}"</p>
                     ` : `
                       <div class="border-b border-dashed border-slate-400 h-5"></div>
                       <div class="border-b border-dashed border-slate-400 h-5"></div>
@@ -5331,51 +5332,53 @@
 
         // 3. SUMMATIVE ASSESSMENT CARD HTML GENERATOR (SA1, SA2)
         const renderSaCardHtml = (saCode) => {
-          const saMarksData = examData[saCode] || {};
           let saObtainedSum = 0;
           let saMaxSum = 0;
+          let enteredCount = 0;
 
           const saRows = subjectsForCard.map(item => {
-            const rawSa = parseFloat(saMarksData[item.key]) || 0;
-            // Scale SA mark to saMax (80M / 40M) if entered as 100M
-            const saObt = rawSa > item.saMax ? Math.round((rawSa / item.maxMarks) * item.saMax) : rawSa;
-
-            // FA Average (out of 20M / 10M)
-            let faSum = 0;
-            let faCnt = 0;
+            const saEntry = getStudentSubjectEntry(s, saCode, item);
             const faList = saCode === 'SA1' ? ['FA1', 'FA2'] : ['FA1', 'FA2', 'FA3', 'FA4'];
-            faList.forEach(ex => {
-              const v = parseFloat(examData[ex][item.key]);
-              if (!isNaN(v) && v > 0) { faSum += v; faCnt++; }
-            });
-            let faAvg = faCnt > 0 ? (faSum / faCnt) : 0;
-            if (faAvg === 0 && rawSa > 0) {
-              faAvg = Math.round((rawSa / item.maxMarks) * item.faMax);
+            const faEntries = faList.map(fa => getStudentSubjectEntry(s, fa, item)).filter(e => e.entered);
+            const faAvg = faEntries.length > 0 ? Math.round(faEntries.reduce((sum, e) => sum + e.mark, 0) / faEntries.length) : null;
+
+            let total100 = null;
+            let subGrade = '--';
+            let subGp = '--';
+
+            if (saEntry.entered && faAvg !== null) {
+              total100 = Math.round(saEntry.mark + faAvg);
+            } else if (saEntry.entered && faAvg === null) {
+              total100 = Math.round((saEntry.mark / item.saMax) * item.maxMarks);
+            } else if (!saEntry.entered && faAvg !== null) {
+              total100 = Math.round((faAvg / item.faMax) * item.maxMarks);
             }
 
-            const total100 = Math.round(saObt + faAvg);
-
-            if (!item.isOptional) {
-              saObtainedSum += total100;
-              saMaxSum += item.maxMarks;
+            if (total100 !== null) {
+              const gInfo = calculateGradeAndGPA((total100 / item.maxMarks) * 100);
+              subGrade = gInfo.grade;
+              subGp = gInfo.gpa;
+              if (!item.isOptional) {
+                saObtainedSum += total100;
+                saMaxSum += item.maxMarks;
+                enteredCount++;
+              }
             }
-
-            const subGradeInfo = calculateGradeAndGPA((total100 / item.maxMarks) * 100);
 
             return {
               label: item.label,
               isOptional: item.isOptional,
-              saObt: Math.round(saObt),
-              faAvg: Math.round(faAvg),
-              total100,
-              maxMarks: item.maxMarks,
-              grade: subGradeInfo.grade,
-              gp: subGradeInfo.gpa
+              saObt: saEntry.entered ? saEntry.mark : '--',
+              faAvg: faAvg !== null ? faAvg : '--',
+              total100: total100 !== null ? total100 : '--',
+              grade: subGrade,
+              gp: subGp
             };
           });
 
-          const saPct = saMaxSum > 0 ? ((saObtainedSum / saMaxSum) * 100).toFixed(1) : '0.0';
-          const saGradeInfo = calculateGradeAndGPA(saPct);
+          const hasMarks = enteredCount > 0 && saMaxSum > 0;
+          const saPct = hasMarks ? ((saObtainedSum / saMaxSum) * 100).toFixed(1) : '0.0';
+          const saGradeInfo = hasMarks ? calculateGradeAndGPA(saPct) : { grade: '--', gpa: '--' };
 
           return `
             <div class="bg-purple-50/40 border-2 border-purple-900 rounded-3xl p-6 space-y-5 shadow-sm text-xs font-semibold">
@@ -5432,24 +5435,24 @@
                     <tr class="hover:bg-purple-50/50 text-center font-bold">
                       <td class="p-2 border-r border-slate-300 text-slate-500">7</td>
                       <td class="p-2 border-r border-slate-300 text-left font-bold text-slate-800">VALUE EDUCATION & LIFE SKILLS</td>
-                      <td colspan="3" class="p-2 border-r border-slate-300 font-mono text-slate-700">45 / 50 Marks</td>
-                      <td class="p-2 border-r border-slate-300 font-black text-emerald-800">A+</td>
-                      <td class="p-2 font-mono font-black text-sky-900">10 GP</td>
+                      <td colspan="3" class="p-2 border-r border-slate-300 font-mono text-slate-700">${hasMarks ? '45 / 50 Marks' : '--'}</td>
+                      <td class="p-2 border-r border-slate-300 font-black text-emerald-800">${hasMarks ? 'A+' : '--'}</td>
+                      <td class="p-2 font-mono font-black text-sky-900">${hasMarks ? '10 GP' : '--'}</td>
                     </tr>
                     <tr class="hover:bg-purple-50/50 text-center font-bold">
                       <td class="p-2 border-r border-slate-300 text-slate-500">8</td>
                       <td class="p-2 border-r border-slate-300 text-left font-bold text-slate-800">ART / CULTURAL EDUCATION</td>
-                      <td colspan="3" class="p-2 border-r border-slate-300 font-mono text-slate-700">44 / 50 Marks</td>
-                      <td class="p-2 border-r border-slate-300 font-black text-emerald-800">A+</td>
-                      <td class="p-2 font-mono font-black text-sky-900">10 GP</td>
+                      <td colspan="3" class="p-2 border-r border-slate-300 font-mono text-slate-700">${hasMarks ? '44 / 50 Marks' : '--'}</td>
+                      <td class="p-2 border-r border-slate-300 font-black text-emerald-800">${hasMarks ? 'A+' : '--'}</td>
+                      <td class="p-2 font-mono font-black text-sky-900">${hasMarks ? '10 GP' : '--'}</td>
                     </tr>
 
                     <tr class="bg-purple-900 text-white font-black text-center border-t-2 border-purple-950">
                       <td colspan="2" class="p-2 text-left uppercase font-black tracking-wider text-amber-300">TOTAL ${saCode} PERFORMANCE</td>
-                      <td colspan="2" class="p-2 text-purple-200">Total Aggregate Score</td>
-                      <td class="p-2 font-mono text-base font-black text-amber-300 bg-amber-950">${saObtainedSum} / ${saMaxSum}</td>
+                      <td colspan="2" class="p-2 text-purple-200 font-medium">Total Aggregate Score</td>
+                      <td class="p-2 font-mono text-base font-black text-amber-300 bg-amber-950">${hasMarks ? `${saObtainedSum} / ${saMaxSum}` : '--'}</td>
                       <td class="p-2 text-base font-black text-rose-300">${saGradeInfo.grade}</td>
-                      <td class="p-2 font-mono text-base font-black text-sky-300 bg-sky-950">${saGradeInfo.gpa} GP</td>
+                      <td class="p-2 font-mono text-base font-black text-sky-300 bg-sky-950">${hasMarks ? `${saGradeInfo.gpa} GP` : '--'}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -5476,8 +5479,13 @@
                   <h4 class="font-black text-purple-900 uppercase text-[11px] border-b pb-1">${saCode} SUMMARY</h4>
                   <div class="bg-purple-900 text-white p-3 rounded-2xl space-y-1">
                     <span class="text-[10px] text-purple-200 font-bold uppercase">PERCENTAGE & GRADE</span>
-                    <p class="text-2xl font-black font-mono text-amber-300">${saPct}% Marks</p>
-                    <p class="text-sm font-black text-emerald-300">Grade: ${saGradeInfo.grade} (${saGradeInfo.gpa} GP)</p>
+                    ${hasMarks ? `
+                      <p class="text-2xl font-black font-mono text-amber-300">${saPct}% Marks</p>
+                      <p class="text-sm font-black text-emerald-300">Grade: ${saGradeInfo.grade} (${saGradeInfo.gpa} GP)</p>
+                    ` : `
+                      <p class="text-base font-bold text-amber-300 mt-1">Marks Not Entered Yet</p>
+                      <p class="text-[11px] text-purple-200 font-semibold">${saCode} result pending</p>
+                    `}
                   </div>
                 </div>
 
@@ -5491,10 +5499,10 @@
                     oninput="updateStudentTeacherRemarks('${s.id}', '${saCode}', this.value)"
                     placeholder="Type ${saCode} teacher remarks here (or leave blank to handwrite)..."
                     class="w-full bg-purple-50/40 border border-purple-200 focus:bg-white rounded-xl p-2 text-xs font-semibold text-slate-900 min-h-[50px] print:hidden resize-none"
-                  >${saMarksData.teacherRemarks || s.termRemarks?.[saCode]?.teacherRemarks || s.teacherRemarks || ''}</textarea>
+                  >${s.termMarks?.[saCode]?.teacherRemarks || s.termRemarks?.[saCode]?.teacherRemarks || s.teacherRemarks || ''}</textarea>
                   <div class="hidden print:block pt-1 space-y-2">
-                    ${(saMarksData.teacherRemarks || s.termRemarks?.[saCode]?.teacherRemarks || s.teacherRemarks) ? `
-                      <p class="text-[11px] text-slate-900 italic font-bold border-b border-slate-300 pb-1">"${saMarksData.teacherRemarks || s.termRemarks?.[saCode]?.teacherRemarks || s.teacherRemarks}"</p>
+                    ${(s.termMarks?.[saCode]?.teacherRemarks || s.termRemarks?.[saCode]?.teacherRemarks || s.teacherRemarks) ? `
+                      <p class="text-[11px] text-slate-900 italic font-bold border-b border-slate-300 pb-1">"${s.termMarks?.[saCode]?.teacherRemarks || s.termRemarks?.[saCode]?.teacherRemarks || s.teacherRemarks}"</p>
                     ` : `
                       <div class="border-b border-dashed border-slate-400 h-5"></div>
                       <div class="border-b border-dashed border-slate-400 h-5"></div>
@@ -5571,7 +5579,7 @@
               </div>
 
               <!-- PRINT CONTENT CONTAINER -->
-              <div class="space-y-6 overflow-y-auto flex-1 pr-1">
+              <div class="space-y-6 overflow-y-auto flex-1 pr-1 pt-3">
                 ${currentSubTab === 'combined' ? renderCombinedCardHtml() : ''}
                 ${currentSubTab === 'fa1' ? renderFaCardHtml('FA1') : ''}
                 ${currentSubTab === 'fa2' ? renderFaCardHtml('FA2') : ''}
