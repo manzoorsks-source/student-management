@@ -648,7 +648,7 @@
       }
     };
 
-    const APP_VERSION = 'stv_v2026_attendance_date_picker_v9';
+    const APP_VERSION = 'stv_v2026_fee_export_full_details_v10';
     try {
       if (localStorage.getItem('stv_app_version') !== APP_VERSION) {
         localStorage.clear();
@@ -1325,13 +1325,13 @@
       },
       fees: {
         name: '💳 Fee Collection & Monthly Installments',
-        filename: 'StVenus_Fee_Details_Template.xlsx',
+        filename: 'StVenus_Fee_Details_Ledger_Complete.xlsx',
         columns: [
-          'StudentID', 'StudentName', 'Class', 'MonthlyFeeRate', 'PaidMonthsCount', 'LastPaidDate', 'PaymentAmount', 'PaymentMode', 'Remarks'
+          'S.NO', 'STUDENT ID', 'ADMN NO', 'ROLL NO', 'STUDENT NAME', 'CLASS', 'SECTION', 'FATHER / PARENT NAME', 'CONTACT MOBILE', 'WHATSAPP NO', 'MONTHLY TUITION FEE (₹)', 'TOTAL ANNUAL TUITION FEE (₹)', 'ANNUAL EXAM FEE (₹)', 'EXAM FEE STATUS', 'TRANSPORT MODE', 'MONTHLY BUS FEE (₹)', 'ANNUAL BUS FEE (₹)', 'GRAND TOTAL ANNUAL FEE (₹)', 'TOTAL PAID AMOUNT TILL DATE (₹)', 'PAID INSTALLMENTS', 'TOTAL ARREARS / BALANCE DUE (₹)', 'FEE STATUS', 'LAST PAYMENT DATE', 'LAST RECEIPT NO', 'LAST PAYMENT MODE'
         ],
         sample: [
-          { StudentID: 'STD-1001', StudentName: 'Aditya Joshi', Class: '5th', MonthlyFeeRate: 2000, PaidMonthsCount: 10, LastPaidDate: '2026-08-01', PaymentAmount: 20000, PaymentMode: 'Cash', Remarks: 'Full Fee Paid' },
-          { StudentID: 'STD-1002', StudentName: 'Charan Kumar', Class: '5th', MonthlyFeeRate: 2000, PaidMonthsCount: 7, LastPaidDate: '2026-07-15', PaymentAmount: 14000, PaymentMode: 'UPI', Remarks: '3 Months Arrears Pending' }
+          { 'S.NO': 1, 'STUDENT ID': 'STV-3001', 'ADMN NO': '3001', 'ROLL NO': '1', 'STUDENT NAME': 'Aditya Joshi', 'CLASS': '5th Class', 'SECTION': 'A', 'FATHER / PARENT NAME': 'Manoj Joshi', 'CONTACT MOBILE': '9849011223', 'WHATSAPP NO': '9849011223', 'MONTHLY TUITION FEE (₹)': 2400, 'TOTAL ANNUAL TUITION FEE (₹)': 26400, 'ANNUAL EXAM FEE (₹)': 1100, 'EXAM FEE STATUS': 'PAID', 'TRANSPORT MODE': 'School Bus', 'MONTHLY BUS FEE (₹)': 1200, 'ANNUAL BUS FEE (₹)': 13200, 'GRAND TOTAL ANNUAL FEE (₹)': 40700, 'TOTAL PAID AMOUNT TILL DATE (₹)': 40700, 'PAID INSTALLMENTS': '11/11 Months', 'TOTAL ARREARS / BALANCE DUE (₹)': 0, 'FEE STATUS': 'CLEARED / FULL PAID', 'LAST PAYMENT DATE': '2026-08-01', 'LAST RECEIPT NO': 'REC-2026-001', 'LAST PAYMENT MODE': 'UPI' },
+          { 'S.NO': 2, 'STUDENT ID': 'STV-3002', 'ADMN NO': '3002', 'ROLL NO': '2', 'STUDENT NAME': 'Charan Kumar', 'CLASS': '5th Class', 'SECTION': 'A', 'FATHER / PARENT NAME': 'Ramesh Kumar', 'CONTACT MOBILE': '9849044556', 'WHATSAPP NO': '9849044556', 'MONTHLY TUITION FEE (₹)': 2400, 'TOTAL ANNUAL TUITION FEE (₹)': 26400, 'ANNUAL EXAM FEE (₹)': 1100, 'EXAM FEE STATUS': 'UNPAID', 'TRANSPORT MODE': 'Own Transportation', 'MONTHLY BUS FEE (₹)': 0, 'ANNUAL BUS FEE (₹)': 0, 'GRAND TOTAL ANNUAL FEE (₹)': 27500, 'TOTAL PAID AMOUNT TILL DATE (₹)': 7200, 'PAID INSTALLMENTS': '3/11 Months', 'TOTAL ARREARS / BALANCE DUE (₹)': 20300, 'FEE STATUS': 'PARTIAL PAID (ARREARS DUE)', 'LAST PAYMENT DATE': '2026-07-15', 'LAST RECEIPT NO': 'REC-2026-002', 'LAST PAYMENT MODE': 'Cash' }
         ]
       },
       attendance: {
@@ -1440,18 +1440,35 @@
           });
         });
       } else if (moduleKey === 'fees') {
-        exportRows = state.students.map(s => {
+        exportRows = state.students.map((s, idx) => {
           const totals = getStudentFeeTotals(s);
+          const lastPayment = (s.paymentHistory && Array.isArray(s.paymentHistory) && s.paymentHistory.length > 0) ? s.paymentHistory[s.paymentHistory.length - 1] : null;
           return {
-            StudentID: s.id,
-            StudentName: s.name,
-            Class: s.grade,
-            MonthlyFeeRate: totals.monthlyRate,
-            PaidMonthsCount: s.paidMonths || 0,
-            LastPaidDate: '2026-08-01',
-            PaymentAmount: totals.totalPaidFee,
-            PaymentMode: 'UPI/Cash',
-            Remarks: s.remarks || ''
+            'S.NO': idx + 1,
+            'STUDENT ID': s.id,
+            'ADMN NO': s.admnNo || s.id,
+            'ROLL NO': s.rollNo,
+            'STUDENT NAME': s.name,
+            'CLASS': s.grade,
+            'SECTION': s.section,
+            'FATHER / PARENT NAME': s.fatherName || s.parentName || '--',
+            'CONTACT MOBILE': s.phone || '--',
+            'WHATSAPP NO': s.whatsappNo || s.altPhone || s.phone || '--',
+            'MONTHLY TUITION FEE (₹)': totals.monthlyRate,
+            'TOTAL ANNUAL TUITION FEE (₹)': totals.tuitionTotal,
+            'ANNUAL EXAM FEE (₹)': totals.examFee,
+            'EXAM FEE STATUS': s.examFeePaid === true ? 'PAID' : 'UNPAID',
+            'TRANSPORT MODE': s.transportMode || 'Own Transportation',
+            'MONTHLY BUS FEE (₹)': totals.monthlyBusFee,
+            'ANNUAL BUS FEE (₹)': totals.annualBusFee,
+            'GRAND TOTAL ANNUAL FEE (₹)': totals.grandTotalFee,
+            'TOTAL PAID AMOUNT TILL DATE (₹)': totals.totalPaidFee,
+            'PAID INSTALLMENTS': `${s.paidMonths || totals.paidMonthsCount || 0}/${totals.totalMonths} Months`,
+            'TOTAL ARREARS / BALANCE DUE (₹)': totals.balanceDue,
+            'FEE STATUS': totals.balanceDue <= 0 ? 'CLEARED / FULL PAID' : (totals.totalPaidFee > 0 ? 'PARTIAL PAID (ARREARS DUE)' : 'UNPAID (FULL DUE)'),
+            'LAST PAYMENT DATE': lastPayment ? lastPayment.date : 'No Payment Recorded',
+            'LAST RECEIPT NO': lastPayment ? (lastPayment.receiptNo || 'REC-' + lastPayment.id) : 'N/A',
+            'LAST PAYMENT MODE': lastPayment ? (lastPayment.mode || 'Cash/UPI') : 'N/A'
           };
         });
       } else if (moduleKey === 'attendance') {
@@ -10114,31 +10131,39 @@
       if (currentTab === 'fees' && isAdmin) {
         // EXPORT COMPLETE FEE DETAILS LEDGER
         const feeData = filtered.map((s, idx) => {
-          const feeCalc = getStudentFeeTotals(s);
+          const totals = getStudentFeeTotals(s);
+          const lastPayment = (s.paymentHistory && Array.isArray(s.paymentHistory) && s.paymentHistory.length > 0) ? s.paymentHistory[s.paymentHistory.length - 1] : null;
           return {
-            'S.No': idx + 1,
-            'Student ID': s.id,
-            'Roll No': s.rollNo,
-            'Student Name': s.name,
-            'Class': s.grade,
-            'Section': s.section,
-            'Parent Name': s.parentName,
-            'Primary Phone': s.phone,
-            'Alternate Phone': s.altPhone || 'N/A',
-            'Monthly Fee Rate (₹)': feeCalc.monthlyRate,
-            '10-Month Tuition Fee (₹)': feeCalc.monthlyRate * 10,
-            'Admission Fee (₹)': s.admissionFee || 5000,
-            'Exam Fee (₹)': s.examFee || 2000,
-            'Grand Total Annual Fee (₹)': feeCalc.grandTotalFee,
-            'Paid Months (out of 10)': `${s.paidMonths}/10`,
-            'Total Amount Paid (₹)': feeCalc.totalPaidFee,
-            'Pending Balance Due (₹)': feeCalc.balanceDue,
-            'Fee Status': feeCalc.balanceDue <= 0 ? 'Full Paid' : (feeCalc.totalPaidFee > 0 ? 'Partial Paid' : 'Unpaid')
+            'S.NO': idx + 1,
+            'STUDENT ID': s.id,
+            'ADMN NO': s.admnNo || s.id,
+            'ROLL NO': s.rollNo,
+            'STUDENT NAME': s.name,
+            'CLASS': s.grade,
+            'SECTION': s.section,
+            'FATHER / PARENT NAME': s.fatherName || s.parentName || '--',
+            'CONTACT MOBILE': s.phone || '--',
+            'WHATSAPP NO': s.whatsappNo || s.altPhone || s.phone || '--',
+            'MONTHLY TUITION FEE (₹)': totals.monthlyRate,
+            'TOTAL ANNUAL TUITION FEE (₹)': totals.tuitionTotal,
+            'ANNUAL EXAM FEE (₹)': totals.examFee,
+            'EXAM FEE STATUS': s.examFeePaid === true ? 'PAID' : 'UNPAID',
+            'TRANSPORT MODE': s.transportMode || 'Own Transportation',
+            'MONTHLY BUS FEE (₹)': totals.monthlyBusFee,
+            'ANNUAL BUS FEE (₹)': totals.annualBusFee,
+            'GRAND TOTAL ANNUAL FEE (₹)': totals.grandTotalFee,
+            'TOTAL PAID AMOUNT TILL DATE (₹)': totals.totalPaidFee,
+            'PAID INSTALLMENTS': `${s.paidMonths || totals.paidMonthsCount || 0}/${totals.totalMonths} Months`,
+            'TOTAL ARREARS / BALANCE DUE (₹)': totals.balanceDue,
+            'FEE STATUS': totals.balanceDue <= 0 ? 'CLEARED / FULL PAID' : (totals.totalPaidFee > 0 ? 'PARTIAL PAID (ARREARS DUE)' : 'UNPAID (FULL DUE)'),
+            'LAST PAYMENT DATE': lastPayment ? lastPayment.date : 'No Payment Recorded',
+            'LAST RECEIPT NO': lastPayment ? (lastPayment.receiptNo || 'REC-' + lastPayment.id) : 'N/A',
+            'LAST PAYMENT MODE': lastPayment ? (lastPayment.mode || 'Cash/UPI') : 'N/A'
           };
         });
         const ws = XLSX.utils.json_to_sheet(feeData);
         XLSX.utils.book_append_sheet(wb, ws, 'Fee_Details_Ledger');
-        XLSX.writeFile(wb, `ST_VENUS_HIGH_SCHOOL_Fee_Details_${Date.now().toString().slice(-4)}.xlsx`);
+        XLSX.writeFile(wb, `ST_VENUS_HIGH_SCHOOL_Fee_Ledger_Complete_${Date.now().toString().slice(-4)}.xlsx`);
       } else if (currentTab === 'performance') {
         // EXPORT COMPLETE ACADEMIC MARKS & MULTI-TERM PERFORMANCE
         const marksData = filtered.map((s, idx) => {
