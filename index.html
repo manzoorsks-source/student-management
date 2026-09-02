@@ -194,12 +194,12 @@
         { name: 'Drawing', shortName: 'DRW', maxMarks: 100, passMarks: 35, type: 'Activity', isOptional: true }
       ],
       'LKG': [
-        { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'Hindi', shortName: 'HIN', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'English', shortName: 'ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'EVS', shortName: 'EVS', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'General English', shortName: 'G.ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
+        { name: 'General English (Oral)', shortName: 'G.ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
+        { name: 'Rhymes (Oral)', shortName: 'RHY', maxMarks: 100, passMarks: 35, type: 'Core' },
         { name: 'Drawing', shortName: 'DRW', maxMarks: 100, passMarks: 35, type: 'Activity', isOptional: true }
       ],
       'UKG': [
@@ -641,7 +641,7 @@
       }
     };
 
-    const APP_VERSION = 'stv_v2026_600m_exact_subjects_v6';
+    const APP_VERSION = 'stv_v2026_lkg_subjects_v7';
     try {
       if (localStorage.getItem('stv_app_version') !== APP_VERSION) {
         localStorage.clear();
@@ -4707,6 +4707,7 @@
           else if (subLower.includes('bio science')) displayName = 'Biological Science (B.S)';
           else if (subLower === 'science') displayName = 'GENERAL SCIENCE';
           else if (subLower === 'social') displayName = 'SOCIAL STUDIES';
+          else if (subLower.includes('rhymes')) displayName = 'Rhymes (Oral)';
           else if (subLower === 'drawing') displayName = 'Drawing & Art (Optional)';
           
           return { 
