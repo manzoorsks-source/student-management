@@ -415,9 +415,117 @@
         desc: matched.desc,
         isPass: matched.grade !== 'F'
       };
+    function findExamData(student, examCode) {
+      if (!student || !student.termMarks) return null;
+      const target = (examCode || '').toUpperCase().trim();
+      
+      // Priority 1: Direct exact key match (e.g. 'FA1', 'FA2', 'SA1', 'FA3', 'FA4', 'SA2')
+      if (student.termMarks[target]) return student.termMarks[target];
+      if (student.termMarks[examCode]) return student.termMarks[examCode];
+
+      // Priority 2: Standard clean match ('FA-1' -> 'FA1', 'SA-1' -> 'SA1')
+      const cleanTarget = target.replace(/[\s\-_]/g, '');
+      for (const k in student.termMarks) {
+        if (k.toUpperCase().replace(/[\s\-_]/g, '') === cleanTarget) {
+          return student.termMarks[k];
+        }
+      }
+
+      // Priority 3: Formative / Summative word matches
+      for (const k in student.termMarks) {
+        const cleanK = k.toUpperCase().replace(/[\s\-_]/g, '');
+        if (cleanTarget === 'FA1' && (cleanK === 'FA1' || cleanK === 'FORMATIVE1' || cleanK === 'FORMATIVEASSESSMENT1')) return student.termMarks[k];
+        if (cleanTarget === 'FA2' && (cleanK === 'FA2' || cleanK === 'FORMATIVE2' || cleanK === 'FORMATIVEASSESSMENT2')) return student.termMarks[k];
+        if (cleanTarget === 'SA1' && (cleanK === 'SA1' || cleanK === 'SUMMATIVE1' || cleanK === 'SUMMATIVEASSESSMENT1' || cleanK === 'HALFYEARLY')) return student.termMarks[k];
+        if (cleanTarget === 'FA3' && (cleanK === 'FA3' || cleanK === 'FORMATIVE3' || cleanK === 'FORMATIVEASSESSMENT3')) return student.termMarks[k];
+        if (cleanTarget === 'FA4' && (cleanK === 'FA4' || cleanK === 'FORMATIVE4' || cleanK === 'FORMATIVEASSESSMENT4')) return student.termMarks[k];
+        if (cleanTarget === 'SA2' && (cleanK === 'SA2' || cleanK === 'SUMMATIVE2' || cleanK === 'SUMMATIVEASSESSMENT2' || cleanK === 'ANNUALEXAM')) return student.termMarks[k];
+      }
+
+      // Priority 4: Legacy term names ('1st Term Exam', '2nd Term Exam', 'Final Term Exam') ONLY if not dummy zeros
+      const legacyMap = {
+        'FA1': ['1STTERMEXAM', '1STTERM'],
+        'SA1': ['2NDTERMEXAM', '2NDTERM'],
+        'SA2': ['FINALTERMEXAM', 'FINALTERM']
+      };
+      const legacyKeys = legacyMap[cleanTarget] || [];
+      for (const leg of legacyKeys) {
+        for (const k in student.termMarks) {
+          if (k.toUpperCase().replace(/[\s\-_]/g, '') === leg) {
+            const obj = student.termMarks[k];
+            const values = Object.values(obj || {}).filter(v => v !== '' && v !== null && v !== undefined && v !== 'NA');
+            const hasRealMarks = values.some(v => parseFloat(v) > 0 || v === 'AB' || v === 'ML');
+            if (hasRealMarks) return obj;
+          }
+        }
+      }
+      return null;
     }
 
-        function normalizeClassCode(className) {
+    function getStudentSubjectEntry(student, exKey, subItem) {
+      const tData = findExamData(student, exKey);
+      if (!tData) return { entered: false, mark: null, text: '--' };
+
+      const exUpper = (exKey || '').toUpperCase().replace(/[\s\-_]/g, '');
+
+      // Direct subject key match first
+      let rawMark = undefined;
+      const subKey = subItem.key || subItem.name;
+      if (tData[subKey] !== undefined && tData[subKey] !== '' && tData[subKey] !== null && tData[subKey] !== 'NA') {
+        rawMark = tData[subKey];
+      } else if (subItem.name && tData[subItem.name] !== undefined && tData[subItem.name] !== '' && tData[subItem.name] !== null && tData[subItem.name] !== 'NA') {
+        rawMark = tData[subItem.name];
+      } else {
+        // Intelligent subject alias matching
+        const targetKey = (subKey || '').toLowerCase().replace(/[\s\-_().]/g, '');
+        for (const subName in tData) {
+          const val = tData[subName];
+          if (val === undefined || val === '' || val === null || val === 'NA') continue;
+          const cleanSub = subName.toLowerCase().replace(/[\s\-_().]/g, '');
+          if (cleanSub === targetKey || cleanSub.includes(targetKey) || targetKey.includes(cleanSub)) {
+            rawMark = val;
+            break;
+          }
+          if ((targetKey.includes('telugu') || targetKey.includes('1stlang')) && cleanSub.includes('telugu')) { rawMark = val; break; }
+          if ((targetKey.includes('hindi') || targetKey.includes('2ndlang')) && cleanSub.includes('hindi')) { rawMark = val; break; }
+          if ((targetKey.includes('english') || targetKey.includes('3rdlang')) && cleanSub.includes('english')) { rawMark = val; break; }
+          if ((targetKey.includes('math') || targetKey.includes('maths')) && cleanSub.includes('math')) { rawMark = val; break; }
+          if (targetKey.includes('social') && cleanSub.includes('social')) { rawMark = val; break; }
+          if ((targetKey.includes('physical') || targetKey === 'ps') && (cleanSub.includes('physical') || cleanSub === 'ps')) { rawMark = val; break; }
+          if ((targetKey.includes('bio') || targetKey === 'bs') && (cleanSub.includes('bio') || cleanSub === 'bs')) { rawMark = val; break; }
+          if (targetKey.includes('science') && cleanSub.includes('science')) { rawMark = val; break; }
+        }
+      }
+
+      if (rawMark === undefined || rawMark === '' || rawMark === null || rawMark === 'NA') {
+        return { entered: false, mark: null, text: '--' };
+      }
+
+      if (rawMark === 'AB' || rawMark === 'ML') {
+        return { entered: true, isAbsent: true, mark: 0, text: rawMark };
+      }
+
+      let num = parseFloat(rawMark);
+      if (isNaN(num)) return { entered: false, mark: null, text: '--' };
+
+      const subLower = (subItem.name || subItem.key || '').toLowerCase();
+      const isPSorBS = subLower.includes('physical science') || subLower.includes('bio science') || subItem.shortName === 'P.S' || subItem.shortName === 'B.S';
+      const itemFaMax = subItem.faMax || (isPSorBS ? 10 : 20);
+      const itemSaMax = subItem.saMax || (isPSorBS ? 40 : 80);
+
+      // Scale proportion if entered out of 100 instead of term max
+      if (exUpper.startsWith('FA') && num > itemFaMax && num <= 100) {
+        num = Math.round((num / 100) * itemFaMax);
+      } else if (exUpper.startsWith('SA') && num > itemSaMax && num <= 100) {
+        num = Math.round((num / 100) * itemSaMax);
+      } else {
+        num = Math.round(num);
+      }
+
+      return { entered: true, isAbsent: false, mark: num, text: num.toString() };
+    }
+
+    function normalizeClassCode(className) {
       if (!className) return '';
       const s = className.toString().trim().toUpperCase().replace(/CLASS/g, '').replace(/[\s_-]/g, '');
       if (s === 'NURSERY' || s === 'NUR' || s === 'PRENURSERY') return 'NURSERY';
@@ -1101,52 +1209,55 @@
           marksObj: {}
         };
       }
-      const marksObj = student.termMarks?.[termName] || {};
-      const currentExam = (termName || 'FA1').toString();
+      const currentExam = (termName || 'FA1').toString().toUpperCase();
       const subjectsDetailed = getClassSubjectsDetailed(student.grade, currentExam);
       
       let totalObtained = 0;
       let maxTotal = 0;
       let hasAnyMarkEntered = false;
       let isPass = true;
+      const marksObj = {};
 
       subjectsDetailed.forEach(subObj => {
         const isOpt = subObj.isOptional === true;
-        const val = marksObj[subObj.name];
+        const subLower = (subObj.name || '').toLowerCase();
+        const isPSorBS = subLower.includes('physical science') || subLower.includes('bio science') || subObj.shortName === 'P.S' || subObj.shortName === 'B.S';
+        const itemFaMax = isPSorBS ? 10 : 20;
+        const itemSaMax = isPSorBS ? 40 : 80;
+        const itemMax = subObj.maxMarks || (isPSorBS ? 50 : 100);
+        const termLimit = currentExam.startsWith('FA') ? itemFaMax : itemMax;
+
+        const entry = getStudentSubjectEntry(student, currentExam, { ...subObj, faMax: itemFaMax, saMax: itemSaMax, maxMarks: itemMax });
         
-        if (val !== undefined && val !== null && val !== '' && val !== 'NA') {
-          if (val === 'AB' || val === 'ML') {
-            hasAnyMarkEntered = true;
-            if (!isOpt) isPass = false;
-          } else {
-            const num = parseFloat(val);
-            if (!isNaN(num)) {
-              hasAnyMarkEntered = true;
-              if (!isOpt) {
-                totalObtained += num;
-                if (num < subObj.passMarks) isPass = false;
-              }
-            }
+        if (entry.entered && entry.mark !== null) {
+          hasAnyMarkEntered = true;
+          marksObj[subObj.name] = entry.mark;
+          if (!isOpt) {
+            totalObtained += entry.mark;
+            const passThresh = Math.round(termLimit * 0.35);
+            if (entry.mark < passThresh) isPass = false;
           }
+        } else {
+          marksObj[subObj.name] = '--';
         }
         
         if (!isOpt) {
-          maxTotal += (subObj.maxMarks || (currentExam.startsWith('FA') ? 20 : 100));
+          maxTotal += termLimit;
         }
       });
 
-      const pctNum = maxTotal > 0 ? (totalObtained / maxTotal) * 100 : 0;
-      const gradeObj = calculateGradeAndGPA(pctNum);
+      const pctNum = (hasAnyMarkEntered && maxTotal > 0) ? (totalObtained / maxTotal) * 100 : 0;
+      const gradeObj = hasAnyMarkEntered ? calculateGradeAndGPA(pctNum) : { grade: '--', gpa: 0, isPass: false };
 
       return {
-        totalObtained: Math.round(totalObtained * 10) / 10,
+        totalObtained: Math.round(totalObtained),
         maxTotal,
-        pct: pctNum.toFixed(1),
+        pct: hasAnyMarkEntered ? pctNum.toFixed(1) : '0.0',
         grade: hasAnyMarkEntered ? gradeObj.grade : '--',
         gpa: hasAnyMarkEntered ? gradeObj.gpa : 0,
-        status: hasAnyMarkEntered ? (isPass && gradeObj.grade !== 'F' ? 'Pass' : 'Fail') : 'Pending Entry',
+        status: hasAnyMarkEntered ? (isPass && gradeObj.grade !== 'F' ? 'Pass' : 'Fail') : 'Pending / Not Entered',
         hasAnyMarkEntered,
-        isPass: isPass && gradeObj.grade !== 'F',
+        isPass: hasAnyMarkEntered && isPass && gradeObj.grade !== 'F',
         marksObj
       };
     }
@@ -2565,9 +2676,10 @@
           const feeCalc = getStudentFeeTotals(student);
           const rankInfo = getStudentClassRank(student);
           const attStats = getStudentAttendanceStats(student);
-          const summary1 = calculateTermSummary(student, '1st Term Exam');
-          const summary2 = calculateTermSummary(student, '2nd Term Exam');
-          const summary3 = calculateTermSummary(student, 'Final Term Exam');
+          const summaryFA1 = calculateTermSummary(student, 'FA1');
+          const summaryFA2 = calculateTermSummary(student, 'FA2');
+          const summarySA1 = calculateTermSummary(student, 'SA1');
+          const classSubjects = getClassSubjectsDetailed(student.grade, 'SA1');
 
           app.innerHTML = `
             <div class="min-h-screen bg-slate-100 p-4 md:p-8 font-sans">
@@ -2736,30 +2848,31 @@
 
                   <!-- 3. MARKS & MULTI-TERM PROGRESS REPORTS SECTION -->
                   <div class="space-y-4">
-                    <h2 class="text-lg font-black text-slate-900 font-display border-b pb-2 flex items-center space-x-2">
-                      <span>📄 Section 3: Subject Marks & Multi-Term Progress Reports</span>
-                    </h2>
-                    <div class="flex justify-end">
-                      <button onclick="openStudentProgressReportModal('${student.id}')" class="bg-gradient-to-r from-rose-700 to-indigo-700 hover:from-rose-800 hover:to-indigo-800 text-white font-black px-4 py-2 rounded-xl text-xs shadow-md active:scale-95 transition-all">
-                        🖨️ View & Print Official Multi-Exam Progress Report Card (A4) &rarr;
+                    <div class="flex flex-wrap justify-between items-center border-b pb-2 gap-2">
+                      <h2 class="text-lg font-black text-slate-900 font-display flex items-center space-x-2">
+                        <span>📄 Section 3: Subject Marks & Multi-Term Progress Reports</span>
+                      </h2>
+                      <button onclick="openReportCardModal('${student.id}')" class="bg-gradient-to-r from-rose-700 to-indigo-700 hover:from-rose-800 hover:to-indigo-800 text-white font-black px-4 py-2 rounded-xl text-xs shadow-md active:scale-95 transition-all flex items-center space-x-1.5">
+                        <span>🖨️</span>
+                        <span>View & Print Official Multi-Exam Progress Report Card (A4) &rarr;</span>
                       </button>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                      <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl text-center space-y-1">
-                        <p class="font-extrabold text-emerald-900 text-sm">1st Term Exam</p>
-                        <p class="text-2xl font-black text-emerald-700 font-display">${summary1.totalObtained} / ${summary1.maxTotal}</p>
-                        <p class="text-xs font-bold text-emerald-800">${summary1.pct}% (${summary1.grade} - ${summary1.status})</p>
+                      <div class="bg-sky-50 border border-sky-200 p-4 rounded-2xl text-center space-y-1">
+                        <p class="font-extrabold text-sky-900 text-sm">Formative Assessment 1 (FA1)</p>
+                        <p class="text-2xl font-black text-sky-800 font-display">${summaryFA1.hasAnyMarkEntered ? `${summaryFA1.totalObtained} / ${summaryFA1.maxTotal}` : '-- / ' + summaryFA1.maxTotal}</p>
+                        <p class="text-xs font-bold ${summaryFA1.hasAnyMarkEntered ? 'text-sky-700' : 'text-slate-400'}">${summaryFA1.hasAnyMarkEntered ? `${summaryFA1.pct}% (${summaryFA1.grade} - ${summaryFA1.status})` : 'Pending Entry'}</p>
                       </div>
                       <div class="bg-blue-50 border border-blue-200 p-4 rounded-2xl text-center space-y-1">
-                        <p class="font-extrabold text-blue-900 text-sm">2nd Term Exam</p>
-                        <p class="text-2xl font-black text-blue-700 font-display">${summary2.totalObtained} / ${summary2.maxTotal}</p>
-                        <p class="text-xs font-bold text-blue-800">${summary2.pct}% (${summary2.grade} - ${summary2.status})</p>
+                        <p class="font-extrabold text-blue-900 text-sm">Formative Assessment 2 (FA2)</p>
+                        <p class="text-2xl font-black text-blue-800 font-display">${summaryFA2.hasAnyMarkEntered ? `${summaryFA2.totalObtained} / ${summaryFA2.maxTotal}` : '-- / ' + summaryFA2.maxTotal}</p>
+                        <p class="text-xs font-bold ${summaryFA2.hasAnyMarkEntered ? 'text-blue-700' : 'text-slate-400'}">${summaryFA2.hasAnyMarkEntered ? `${summaryFA2.pct}% (${summaryFA2.grade} - ${summaryFA2.status})` : 'Pending Entry'}</p>
                       </div>
                       <div class="bg-purple-50 border border-purple-200 p-4 rounded-2xl text-center space-y-1">
-                        <p class="font-extrabold text-purple-900 text-sm">Final Term Exam</p>
-                        <p class="text-2xl font-black text-purple-700 font-display">${summary3.totalObtained} / ${summary3.maxTotal}</p>
-                        <p class="text-xs font-bold text-purple-800">${summary3.pct}% (${summary3.grade} - ${summary3.status})</p>
+                        <p class="font-extrabold text-purple-900 text-sm">Summative Assessment 1 (SA1)</p>
+                        <p class="text-2xl font-black text-purple-800 font-display">${summarySA1.hasAnyMarkEntered ? `${summarySA1.totalObtained} / ${summarySA1.maxTotal}` : '-- / ' + summarySA1.maxTotal}</p>
+                        <p class="text-xs font-bold ${summarySA1.hasAnyMarkEntered ? 'text-purple-700' : 'text-slate-400'}">${summarySA1.hasAnyMarkEntered ? `${summarySA1.pct}% (${summarySA1.grade} - ${summarySA1.status})` : 'Pending Entry'}</p>
                       </div>
                     </div>
 
@@ -2767,27 +2880,62 @@
                     <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 overflow-x-auto text-xs">
                       <table class="w-full text-left border-collapse">
                         <thead>
-                          <tr class="bg-slate-200 text-slate-700 font-bold uppercase text-[11px]">
-                            <th class="p-2">Subject Name</th>
-                            <th class="p-2 text-center">1st Term</th>
-                            <th class="p-2 text-center">2nd Term</th>
-                            <th class="p-2 text-center">Final Term</th>
-                            <th class="p-2 text-center">Average Score</th>
+                          <tr class="bg-slate-200 text-slate-700 font-bold uppercase text-[11px] text-center">
+                            <th class="p-2 text-left">Subject Name</th>
+                            <th class="p-2">FA1 (20M)</th>
+                            <th class="p-2">FA2 (20M)</th>
+                            <th class="p-2 bg-purple-100 text-purple-950">SA1 (80M)</th>
+                            <th class="p-2">FA3 (20M)</th>
+                            <th class="p-2">FA4 (20M)</th>
+                            <th class="p-2 bg-indigo-100 text-indigo-950">SA2 (80M)</th>
+                            <th class="p-2 bg-amber-100 text-amber-950">TOTAL (100M)</th>
+                            <th class="p-2">Grade</th>
                           </tr>
                         </thead>
-                        <tbody class="divide-y text-slate-800 font-medium">
-                          ${state.subjects.map(sub => {
-                            const m1 = summary1.marksObj[sub] || 0;
-                            const m2 = summary2.marksObj[sub] || 0;
-                            const m3 = summary3.marksObj[sub] || 0;
-                            const avg = ((m1 + m2 + m3) / 3).toFixed(1);
+                        <tbody class="divide-y text-slate-800 font-medium text-center">
+                          ${classSubjects.map(subObj => {
+                            const subLower = (subObj.name || '').toLowerCase();
+                            const isPSorBS = subLower.includes('physical science') || subLower.includes('bio science') || subObj.shortName === 'P.S' || subObj.shortName === 'B.S';
+                            const faLimit = isPSorBS ? 10 : 20;
+                            const saLimit = isPSorBS ? 40 : 80;
+                            const maxLimit = subObj.maxMarks || (isPSorBS ? 50 : 100);
+
+                            const eFA1 = getStudentSubjectEntry(student, 'FA1', { ...subObj, faMax: faLimit, saMax: saLimit, maxMarks: maxLimit });
+                            const eFA2 = getStudentSubjectEntry(student, 'FA2', { ...subObj, faMax: faLimit, saMax: saLimit, maxMarks: maxLimit });
+                            const eSA1 = getStudentSubjectEntry(student, 'SA1', { ...subObj, faMax: faLimit, saMax: saLimit, maxMarks: maxLimit });
+                            const eFA3 = getStudentSubjectEntry(student, 'FA3', { ...subObj, faMax: faLimit, saMax: saLimit, maxMarks: maxLimit });
+                            const eFA4 = getStudentSubjectEntry(student, 'FA4', { ...subObj, faMax: faLimit, saMax: saLimit, maxMarks: maxLimit });
+                            const eSA2 = getStudentSubjectEntry(student, 'SA2', { ...subObj, faMax: faLimit, saMax: saLimit, maxMarks: maxLimit });
+
+                            const faList = [eFA1, eFA2, eFA3, eFA4].filter(e => e.entered && e.mark !== null);
+                            const faAvg = faList.length > 0 ? Math.round(faList.reduce((s, e) => s + e.mark, 0) / faList.length) : null;
+                            const saList = [eSA1, eSA2].filter(e => e.entered && e.mark !== null);
+                            const saVal = saList.length > 0 ? Math.round(saList.reduce((s, e) => s + e.mark, 0) / saList.length) : null;
+
+                            let total100 = null;
+                            let gradeStr = '--';
+                            if (faAvg !== null && saVal !== null) {
+                              total100 = Math.round(faAvg + saVal);
+                            } else if (faAvg !== null && saVal === null) {
+                              total100 = Math.round((faAvg / faLimit) * maxLimit);
+                            } else if (faAvg === null && saVal !== null) {
+                              total100 = Math.round((saVal / saLimit) * maxLimit);
+                            }
+                            if (total100 !== null) {
+                              gradeStr = calculateGradeAndGPA((total100 / maxLimit) * 100).grade;
+                            }
+
                             return `
-                              <tr>
-                                <td class="p-2 font-bold text-indigo-950">${sub}</td>
-                                <td class="p-2 text-center font-mono font-bold">${m1}</td>
-                                <td class="p-2 text-center font-mono font-bold">${m2}</td>
-                                <td class="p-2 text-center font-mono font-bold">${m3}</td>
-                                <td class="p-2 text-center font-mono font-black text-indigo-700">${avg}</td>
+                              <tr class="hover:bg-slate-100">
+                                <td class="p-2 font-bold text-indigo-950 text-left">${subObj.name}</td>
+                                <td class="p-2 font-mono ${eFA1.entered ? 'font-bold text-slate-900' : 'text-slate-400'}">${eFA1.entered ? eFA1.mark : '--'}</td>
+                                <td class="p-2 font-mono ${eFA2.entered ? 'font-bold text-slate-900' : 'text-slate-400'}">${eFA2.entered ? eFA2.mark : '--'}</td>
+                                <td class="p-2 font-mono ${eSA1.entered ? 'font-black text-purple-900 bg-purple-50' : 'text-slate-400'}">${eSA1.entered ? eSA1.mark : '--'}</td>
+                                <td class="p-2 font-mono ${eFA3.entered ? 'font-bold text-slate-900' : 'text-slate-400'}">${eFA3.entered ? eFA3.mark : '--'}</td>
+                                <td class="p-2 font-mono ${eFA4.entered ? 'font-bold text-slate-900' : 'text-slate-400'}">${eFA4.entered ? eFA4.mark : '--'}</td>
+                                <td class="p-2 font-mono ${eSA2.entered ? 'font-black text-indigo-900 bg-indigo-50' : 'text-slate-400'}">${eSA2.entered ? eSA2.mark : '--'}</td>
+                                <td class="p-2 font-mono font-black ${total100 !== null ? 'text-amber-950 bg-amber-50' : 'text-slate-400'}">${total100 !== null ? `${total100} / ${maxLimit}` : '--'}</td>
+                                <td class="p-2 font-black ${gradeStr !== '--' ? 'text-emerald-700' : 'text-slate-400'}">${gradeStr}</td>
                               </tr>
                             `;
                           }).join('')}
