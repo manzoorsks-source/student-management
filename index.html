@@ -485,8 +485,19 @@
       ]
     };
 
-    // INITIAL FACULTY ROSTER (EMPTY BY DEFAULT)
-    const INITIAL_TEACHERS = [];
+    // INITIAL FACULTY ROSTER (SEED ROSTER)
+    const INITIAL_TEACHERS = [
+      { id: 'T1', teacherCode: 'T1', name: 'K. SUNITHA', qualification: 'M.Sc, B.Ed', designation: 'Senior Teacher', workload: '5–6 Periods/Day', subject: 'Mathematics', assignedClass: '8th, 9th, 10th', phone: '9849011223', aadhaar: '4455 6677 8899', timing: '8:30 AM – 4:00 PM', salary: 32000, status: 'Active', photoUrl: DEFAULT_AVATAR },
+      { id: 'T2', teacherCode: 'T2', name: 'V. SRINIVAS RAO', qualification: 'M.Sc (Physics), B.Ed', designation: 'Senior Teacher', workload: '5–6 Periods/Day', subject: 'Physical Science', assignedClass: '9th, 10th Class', phone: '9849022334', aadhaar: '3344 5566 7788', timing: '8:30 AM – 4:00 PM', salary: 35000, status: 'Active', photoUrl: DEFAULT_AVATAR },
+      { id: 'T3', teacherCode: 'T3', name: 'P. RADHIKA', qualification: 'M.Sc (Botany), B.Ed', designation: 'Senior Teacher', workload: '5 Periods/Day', subject: 'Bio Science', assignedClass: '8th, 9th, 10th', phone: '9849033445', aadhaar: '2233 4455 6677', timing: '8:30 AM – 4:00 PM', salary: 32000, status: 'Active', photoUrl: DEFAULT_AVATAR },
+      { id: 'T4', teacherCode: 'T4', name: 'M. RAJESH KUMAR', qualification: 'M.A (English), B.Ed', designation: 'Senior Teacher', workload: '5–6 Periods/Day', subject: 'English', assignedClass: '6th, 7th, 8th, 9th, 10th', phone: '9849044556', aadhaar: '5566 7788 9900', timing: '8:30 AM – 4:00 PM', salary: 30000, status: 'Active', photoUrl: DEFAULT_AVATAR },
+      { id: 'T5', teacherCode: 'T5', name: 'T. LAKSHMI', qualification: 'M.A (Telugu), TPT', designation: 'Language Pandit', workload: '5–6 Periods/Day', subject: 'Telugu', assignedClass: '1st to 10th Class', phone: '9849055667', aadhaar: '6677 8899 0011', timing: '8:30 AM – 4:00 PM', salary: 28000, status: 'Active', photoUrl: DEFAULT_AVATAR },
+      { id: 'T6', teacherCode: 'T6', name: 'S. FARHANA BEGUM', qualification: 'M.A (Hindi), HPT', designation: 'Language Pandit', workload: '5–6 Periods/Day', subject: 'Hindi', assignedClass: '1st to 10th Class', phone: '9849066778', aadhaar: '7788 9900 1122', timing: '8:30 AM – 4:00 PM', salary: 28000, status: 'Active', photoUrl: DEFAULT_AVATAR },
+      { id: 'T7', teacherCode: 'T7', name: 'G. RAMESH', qualification: 'M.A (History), B.Ed', designation: 'Senior Teacher', workload: '5 Periods/Day', subject: 'Social Studies', assignedClass: '6th, 7th, 8th, 9th, 10th', phone: '9849077889', aadhaar: '8899 0011 2233', timing: '8:30 AM – 4:00 PM', salary: 29000, status: 'Active', photoUrl: DEFAULT_AVATAR },
+      { id: 'T8', teacherCode: 'T8', name: 'B. PRIYANKA', qualification: 'M.Sc, B.Ed', designation: 'Senior Faculty', workload: '5 Periods/Day', subject: 'Science & Mathematics', assignedClass: 'Primary & High School', phone: '9849088990', aadhaar: '9900 1122 3344', timing: '8:30 AM – 4:00 PM', salary: 30000, status: 'Active', photoUrl: DEFAULT_AVATAR },
+      { id: 'T9', teacherCode: 'T9', name: 'K. NAVEEN', qualification: 'MCA, B.Ed', designation: 'Computer Faculty & IT Incharge', workload: '5 Periods/Day', subject: 'Computer', assignedClass: '1st to 10th Class', phone: '9849099001', aadhaar: '1122 3344 5566', timing: '8:30 AM – 4:00 PM', salary: 28000, status: 'Active', photoUrl: DEFAULT_AVATAR },
+      { id: 'T10', teacherCode: 'T10', name: 'D. SURESH', qualification: 'M.P.Ed', designation: 'Physical Education Teacher (PET)', workload: 'Daily Morning & Evening', subject: 'Physical Education & Games', assignedClass: 'All Classes', phone: '9849010012', aadhaar: '2233 4455 6678', timing: '7:45 AM – 4:30 PM', salary: 26000, status: 'Active', photoUrl: DEFAULT_AVATAR }
+    ];
 
     // WEEKLY TIMETABLE FOR CLASS 1 TO 10 (MATCHING REFERENCE IMAGE 1)
     const WEEKLY_TIMETABLE = [
@@ -648,12 +659,10 @@
       }
     };
 
-    const APP_VERSION = 'stv_v2026_fee_export_full_details_v10';
+    // PERMANENT STORAGE GUARANTEE - NEVER WIPE USER DATA ON REFRESH OR LOGOUT
+    const APP_VERSION = 'stv_v2026_permanent_storage_v11';
     try {
-      if (localStorage.getItem('stv_app_version') !== APP_VERSION) {
-        localStorage.clear();
-        localStorage.setItem('stv_app_version', APP_VERSION);
-      }
+      localStorage.setItem('stv_app_version', APP_VERSION);
     } catch(e) {}
 
     function safeLoadJson(key, fallback) {
@@ -664,8 +673,7 @@
         if (Array.isArray(fallback) && !Array.isArray(parsed)) return fallback;
         return parsed;
       } catch (e) {
-        console.warn(`Corrupted localStorage key "${key}", clearing and resetting to default.`);
-        try { localStorage.removeItem(key); } catch (err) {}
+        console.warn(`Corrupted localStorage key "${key}", falling back to default.`);
         return fallback;
       }
     }
@@ -690,7 +698,7 @@
       selectedStatusFilter: 'all',
       students: safeLoadJson('stv_students_v11', GENERATE_RAW_STUDENTS()),
       subjects: safeLoadJson('stv_subjects_v10', DEFAULT_SUBJECTS),
-      teachers: safeLoadJson('stv_teachers_v15', INITIAL_TEACHERS),
+      teachers: (() => { const t = safeLoadJson('stv_teachers_v15', null); return (Array.isArray(t) && t.length > 0) ? t : INITIAL_TEACHERS; })(),
       timetable: safeLoadJson('stv_timetable_v10', WEEKLY_TIMETABLE),
       attendanceMap: safeLoadJson('stv_attendance_v10', {}),
       notes: safeLoadJson('stv_notes_v10', [
@@ -4477,7 +4485,9 @@
                             </td>
                             <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
                               <button onclick="openEditTeacherModal('${t.id}')" class="bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-1 rounded text-xs font-bold shadow-2xs">✏️ Edit</button>
-                              <button onclick="removeTeacher('${t.id}')" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 px-2.5 py-1 rounded text-xs font-bold shadow-2xs">🗑️ Remove</button>
+                              ${(state.currentUser && (state.currentUser.role === 'admin' || state.currentUser.role === 'super_admin' || state.currentUser.username === 'correspondent')) ? `
+                                <button onclick="removeTeacher('${t.id}')" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 px-2.5 py-1 rounded text-xs font-bold shadow-2xs">🗑️ Remove</button>
+                              ` : ''}
                             </td>
                           </tr>
                         `).join('')}
@@ -8715,6 +8725,11 @@
     }
 
     function removeAllStudents() {
+      const isCorrespondentOrAdmin = state.currentUser && (state.currentUser.role === 'admin' || state.currentUser.role === 'super_admin' || state.currentUser.username === 'correspondent');
+      if (!isCorrespondentOrAdmin) {
+        alert("🔒 Access Denied! Only Correspondent / Administrator can delete all student records.");
+        return;
+      }
       if (confirm('⚠️ Are you sure you want to remove ALL student details from the system?\n\nThis will clear all student profiles, attendance records, and fee ledgers. This action cannot be undone.')) {
         state.students = [];
         state.attendanceMap = {};
@@ -9543,6 +9558,11 @@
     }
 
     function removeTeacher(id) {
+      const isCorrespondentOrAdmin = state.currentUser && (state.currentUser.role === 'admin' || state.currentUser.role === 'super_admin' || state.currentUser.username === 'correspondent');
+      if (!isCorrespondentOrAdmin) {
+        alert("🔒 Access Denied! Only Correspondent / Administrator can delete faculty members from the roster.");
+        return;
+      }
       const teacher = state.teachers.find(t => t.id === id);
       const name = teacher ? teacher.name : 'this faculty member';
       if (confirm(`⚠️ Are you sure you want to remove "${name}" from the Faculty Roster?`)) {
@@ -10007,6 +10027,11 @@
     }
 
     function removeSubject(sub) {
+      const isCorrespondentOrAdmin = state.currentUser && (state.currentUser.role === 'admin' || state.currentUser.role === 'super_admin' || state.currentUser.username === 'correspondent');
+      if (!isCorrespondentOrAdmin) {
+        alert("🔒 Access Denied! Only Correspondent / Administrator can delete subjects from the curriculum.");
+        return;
+      }
       if (confirm(`Remove subject ${sub}?`)) {
         state.subjects = state.subjects.filter(s => s !== sub);
         saveState();
