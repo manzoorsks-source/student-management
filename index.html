@@ -27,6 +27,28 @@
     }
   </script>
 
+  <!-- Global Error Safeguard Boundary -->
+  <script>
+    window.addEventListener('error', function(e) {
+      console.error('Portal Error Handled:', e.error || e.message);
+      const appEl = document.getElementById('app');
+      if (appEl && (!appEl.innerHTML || appEl.innerHTML.trim() === '')) {
+        appEl.innerHTML = `
+          <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f8fafc;font-family:sans-serif;padding:20px;">
+            <div style="max-width:500px;background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:30px;box-shadow:0 10px 25px rgba(0,0,0,0.1);text-align:center;">
+              <div style="font-size:40px;margin-bottom:10px;">🏫</div>
+              <h2 style="font-size:20px;font-weight:900;color:#0f172a;margin-bottom:8px;">ST. VENUS HIGH SCHOOL</h2>
+              <p style="font-size:13px;color:#64748b;margin-bottom:20px;">Portal is refreshing session data. Please click below to reload cleanly.</p>
+              <button onclick="localStorage.removeItem('stv_temp_state'); location.reload();" style="background:#4338ca;color:#fff;border:none;padding:10px 24px;border-radius:12px;font-weight:bold;cursor:pointer;font-size:13px;">
+                🔄 Reload School Portal
+              </button>
+            </div>
+          </div>
+        `;
+      }
+    });
+  </script>
+
   <!-- SheetJS (XLSX Import/Export) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
