@@ -887,6 +887,10 @@
       selectedGrade: 'all',
       selectedSection: 'all',
       selectedExamFilter: 'FA1',
+      selectedAttendanceDate: localStorage.getItem('stv_attendance_date') || getTodayIsoDate(),
+      attendanceSubTab: localStorage.getItem('stv_attendance_subtab') || 'register',
+      selectedAttendanceStudentId: localStorage.getItem('stv_attendance_student_id') || '',
+      selectedCalendarMonth: safeLoadJson('stv_attendance_cal_month', 7),
       searchTerm: '',
       activeTab: 'dashboard',
       fullProfileStudentId: null,
@@ -923,6 +927,10 @@
       localStorage.setItem('stv_teachers_v15', JSON.stringify(state.teachers));
       localStorage.setItem('stv_timetable_v10', JSON.stringify(state.timetable));
       localStorage.setItem('stv_attendance_v10', JSON.stringify(state.attendanceMap));
+      localStorage.setItem('stv_attendance_date', state.selectedAttendanceDate || getTodayIsoDate());
+      localStorage.setItem('stv_attendance_subtab', state.attendanceSubTab || 'register');
+      localStorage.setItem('stv_attendance_student_id', state.selectedAttendanceStudentId || '');
+      localStorage.setItem('stv_attendance_cal_month', JSON.stringify(state.selectedCalendarMonth !== undefined ? state.selectedCalendarMonth : 7));
       localStorage.setItem('stv_notes_v10', JSON.stringify(state.notes));
       localStorage.setItem('stv_tasks_v10', JSON.stringify(state.tasks));
       render();
@@ -8490,18 +8498,25 @@
       const status = document.getElementById('dateStatusInput').value;
       const reason = document.getElementById('dateReasonInput').value.trim();
       const leaveApproved = document.getElementById('dateLeaveApprovedInput').value === 'Yes';
+      const dStr = state.modalSelectedDate;
+      const studId = state.modalStudent.id;
 
       state.students = state.students.map(s => {
-        if (s.id === state.modalStudent.id) {
+        if (s.id === studId) {
           const history = s.attendanceHistory || {};
           const updatedHistory = {
             ...history,
-            [state.modalSelectedDate]: { status, reason, leaveApproved }
+            [dStr]: { date: dStr, status, reason, leaveApproved, updatedAt: new Date().toISOString() }
           };
           return { ...s, attendanceHistory: updatedHistory };
         }
         return s;
       });
+
+      if (dStr === getTodayIsoDate()) {
+        if (!state.attendanceMap) state.attendanceMap = {};
+        state.attendanceMap[studId] = status;
+      }
 
       closeModal();
     }
@@ -8512,12 +8527,16 @@
           const history = s.attendanceHistory || {};
           const updatedHistory = {
             ...history,
-            [isoDate]: { status: 'Present', reason: '', leaveApproved: true }
+            [isoDate]: { date: isoDate, status: 'Present', reason: '', leaveApproved: true, updatedAt: new Date().toISOString() }
           };
           return { ...s, attendanceHistory: updatedHistory };
         }
         return s;
       });
+      if (isoDate === getTodayIsoDate()) {
+        if (!state.attendanceMap) state.attendanceMap = {};
+        state.attendanceMap[studentId] = 'Present';
+      }
       saveState();
     }
 
