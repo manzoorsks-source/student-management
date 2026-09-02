@@ -537,14 +537,8 @@
       const itemFaMax = subItem.faMax || (isPSorBS ? 10 : 20);
       const itemSaMax = subItem.saMax || (isPSorBS ? 40 : 80);
 
-      // Scale proportion if entered out of 100 instead of term max
-      if (exUpper.startsWith('FA') && num > itemFaMax && num <= 100) {
-        num = Math.round((num / 100) * itemFaMax);
-      } else if (exUpper.startsWith('SA') && num > itemSaMax && num <= 100) {
-        num = Math.round((num / 100) * itemSaMax);
-      } else {
-        num = Math.round(num);
-      }
+      // Return exact entered mark cleanly rounded without artificial scaling
+      num = Math.round(num * 10) / 10;
 
       return { entered: true, isAbsent: false, mark: num, text: num.toString() };
     }
@@ -5166,14 +5160,8 @@
           let num = parseFloat(rawMark);
           if (isNaN(num)) return { entered: false, mark: null, text: '--' };
 
-          // Scale proportion if entered out of 100 instead of term max
-          if (exUpper.startsWith('FA') && num > subItem.faMax && num <= 100) {
-            num = Math.round((num / 100) * subItem.faMax);
-          } else if (exUpper.startsWith('SA') && num > subItem.saMax && num <= 100) {
-            num = Math.round((num / 100) * subItem.saMax);
-          } else {
-            num = Math.round(num);
-          }
+          // Return exact entered mark cleanly rounded without artificial scaling
+          num = Math.round(num * 10) / 10;
 
           return { entered: true, isAbsent: false, mark: num, text: num.toString() };
         };
