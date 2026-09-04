@@ -5475,106 +5475,6 @@
           };
         });
 
-        // Helper to locate exam term marks dictionary with strict priority to active exams
-        const findExamData = (student, examCode) => {
-          if (!student || !student.termMarks) return null;
-          const target = (examCode || '').toUpperCase().trim();
-          
-          // Priority 1: Direct exact key match (e.g. 'FA1', 'FA2', 'SA1', 'FA3', 'FA4', 'SA2')
-          if (student.termMarks[target]) return student.termMarks[target];
-          if (student.termMarks[examCode]) return student.termMarks[examCode];
-
-          // Priority 2: Standard clean match ('FA-1' -> 'FA1', 'SA-1' -> 'SA1')
-          const cleanTarget = target.replace(/[\s\-_]/g, '');
-          for (const k in student.termMarks) {
-            if (k.toUpperCase().replace(/[\s\-_]/g, '') === cleanTarget) {
-              return student.termMarks[k];
-            }
-          }
-
-          // Priority 3: Formative / Summative word matches
-          for (const k in student.termMarks) {
-            const cleanK = k.toUpperCase().replace(/[\s\-_]/g, '');
-            if (cleanTarget === 'FA1' && (cleanK === 'FA1' || cleanK === 'FORMATIVE1' || cleanK === 'FORMATIVEASSESSMENT1')) return student.termMarks[k];
-            if (cleanTarget === 'FA2' && (cleanK === 'FA2' || cleanK === 'FORMATIVE2' || cleanK === 'FORMATIVEASSESSMENT2')) return student.termMarks[k];
-            if (cleanTarget === 'SA1' && (cleanK === 'SA1' || cleanK === 'SUMMATIVE1' || cleanK === 'SUMMATIVEASSESSMENT1' || cleanK === 'HALFYEARLY')) return student.termMarks[k];
-            if (cleanTarget === 'FA3' && (cleanK === 'FA3' || cleanK === 'FORMATIVE3' || cleanK === 'FORMATIVEASSESSMENT3')) return student.termMarks[k];
-            if (cleanTarget === 'FA4' && (cleanK === 'FA4' || cleanK === 'FORMATIVE4' || cleanK === 'FORMATIVEASSESSMENT4')) return student.termMarks[k];
-            if (cleanTarget === 'SA2' && (cleanK === 'SA2' || cleanK === 'SUMMATIVE2' || cleanK === 'SUMMATIVEASSESSMENT2' || cleanK === 'ANNUALEXAM')) return student.termMarks[k];
-          }
-
-          // Priority 4: Legacy term names ('1st Term Exam', '2nd Term Exam', 'Final Term Exam') ONLY if not dummy zeros
-          const legacyMap = {
-            'FA1': ['1STTERMEXAM', '1STTERM'],
-            'SA1': ['2NDTERMEXAM', '2NDTERM'],
-            'SA2': ['FINALTERMEXAM', 'FINALTERM']
-          };
-          const legacyKeys = legacyMap[cleanTarget] || [];
-          for (const leg of legacyKeys) {
-            for (const k in student.termMarks) {
-              if (k.toUpperCase().replace(/[\s\-_]/g, '') === leg) {
-                const obj = student.termMarks[k];
-                const values = Object.values(obj || {}).filter(v => v !== '' && v !== null && v !== undefined && v !== 'NA');
-                const hasRealMarks = values.some(v => parseFloat(v) > 0 || v === 'AB' || v === 'ML');
-                if (hasRealMarks) return obj;
-              }
-            }
-          }
-          return null;
-        };
-
-        // Strict Subject Mark Extractor (extracts ONLY entered marks with robust aliases)
-        const getStudentSubjectEntry = (student, exKey, subItem) => {
-          const tData = findExamData(student, exKey);
-          if (!tData) return { entered: false, mark: null, text: '--' };
-
-          const exUpper = (exKey || '').toUpperCase().replace(/[\s\-_]/g, '');
-
-          // Direct subject key match first
-          let rawMark = undefined;
-          if (tData[subItem.key] !== undefined && tData[subItem.key] !== '' && tData[subItem.key] !== null && tData[subItem.key] !== 'NA') {
-            rawMark = tData[subItem.key];
-          } else if (subItem.name && tData[subItem.name] !== undefined && tData[subItem.name] !== '' && tData[subItem.name] !== null && tData[subItem.name] !== 'NA') {
-            rawMark = tData[subItem.name];
-          } else {
-            // Intelligent subject alias matching
-            const targetKey = (subItem.key || subItem.name || '').toLowerCase().replace(/[\s\-_().]/g, '');
-            for (const subName in tData) {
-              const val = tData[subName];
-              if (val === undefined || val === '' || val === null || val === 'NA') continue;
-              const cleanSub = subName.toLowerCase().replace(/[\s\-_().]/g, '');
-              if (cleanSub === targetKey || cleanSub.includes(targetKey) || targetKey.includes(cleanSub)) {
-                rawMark = val;
-                break;
-              }
-              if ((targetKey.includes('telugu') || targetKey.includes('1stlang')) && cleanSub.includes('telugu')) { rawMark = val; break; }
-              if ((targetKey.includes('hindi') || targetKey.includes('2ndlang')) && cleanSub.includes('hindi')) { rawMark = val; break; }
-              if ((targetKey.includes('english') || targetKey.includes('3rdlang')) && cleanSub.includes('english')) { rawMark = val; break; }
-              if ((targetKey.includes('math') || targetKey.includes('maths')) && cleanSub.includes('math')) { rawMark = val; break; }
-              if (targetKey.includes('social') && cleanSub.includes('social')) { rawMark = val; break; }
-              if ((targetKey.includes('physical') || targetKey === 'ps') && (cleanSub.includes('physical') || cleanSub === 'ps')) { rawMark = val; break; }
-              if ((targetKey.includes('bio') || targetKey === 'bs') && (cleanSub.includes('bio') || cleanSub === 'bs')) { rawMark = val; break; }
-              if (targetKey.includes('science') && cleanSub.includes('science')) { rawMark = val; break; }
-            }
-          }
-
-          if (rawMark === undefined || rawMark === '' || rawMark === null || rawMark === 'NA') {
-            return { entered: false, mark: null, text: '--' };
-          }
-
-          if (rawMark === 'AB' || rawMark === 'ML') {
-            return { entered: true, isAbsent: true, mark: 0, text: rawMark };
-          }
-
-          let num = parseFloat(rawMark);
-          if (isNaN(num)) return { entered: false, mark: null, text: '--' };
-
-          // Return exact entered mark cleanly rounded without artificial scaling
-          num = Math.round(num * 10) / 10;
-
-          return { entered: true, isAbsent: false, mark: num, text: num.toString() };
-        };
-
         // 1. COMBINED ANNUAL CARD HTML GENERATOR
         const renderCombinedCardHtml = () => {
           let grandCombinedObtained = 0;
@@ -8855,11 +8755,6 @@
       saveState();
     }
 
-    function openModal(modalName) {
-      state.activeModal = modalName;
-      saveState();
-    }
-
     function closeModal() {
       state.activeModal = null;
       state.modalStudent = null;
@@ -10463,11 +10358,6 @@
     function openReportCardModal(id) {
       const s = state.students.find(st => st.id === id);
       if (s) { state.modalStudent = s; state.activeModal = 'printReportCard'; saveState(); }
-    }
-
-    function openEditStudentModal(id) {
-      const s = state.students.find(st => st.id === id);
-      if (s) { state.modalStudent = s; state.activeModal = 'editStudent'; saveState(); }
     }
 
     function openPayFeeModal(id) {
