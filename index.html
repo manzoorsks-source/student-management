@@ -729,7 +729,7 @@
       {
         id: 'BC-2026-001',
         timestamp: '11-Aug-2026 09:30 AM',
-        sender: 'Mr. M. A. Manzoor (Correspondent / Super Admin)',
+        sender: 'Shaik Madar (Correspondent / Super Admin)',
         type: 'Daily Absence Notice',
         targetAudience: 'ABSENTEES TODAY',
         recipientCount: 3,
@@ -740,7 +740,7 @@
       {
         id: 'BC-2026-002',
         timestamp: '10-Aug-2026 04:15 PM',
-        sender: 'Dr. S. K. Rao (Principal)',
+        sender: 'Mrs. Sunitha Devi (Principal)',
         type: 'School Program & Achievement Photo Dispatch',
         targetAudience: 'ALL ENROLLED PARENTS',
         recipientCount: 130,
@@ -1022,7 +1022,31 @@
             const stateJson = await stateRes.json();
             if (stateJson.success && stateJson.data) {
               const d = stateJson.data;
-              if (d.users) {
+              if (d.users && Array.isArray(d.users) && d.users.length > 0) {
+                // Ensure primary administrator account (shaikmadar786) is guaranteed in users list
+                const hasAdmin = d.users.some(u => (u.username || '').toLowerCase() === 'shaikmadar786');
+                if (!hasAdmin) {
+                  const adminSeed = {
+                    empId: 'EMP-001',
+                    fullName: 'Shaik Madar (Admin / Correspondent)',
+                    username: 'shaikmadar786',
+                    password: 'Shaik@786',
+                    passwordHash: '9d5752ada6cd123fc7905ec6c4e89af4b4e8de924668fb33853ee1da394594f4',
+                    mobile: '+91 9121833702',
+                    email: 'correspondent@stvenushighschool.edu.in',
+                    role: 'super_admin',
+                    status: 'Active',
+                    timing: '8:30 AM – 4:30 PM',
+                    createdAt: '10-Jun-2026 09:00 AM',
+                    lastLogin: 'Never'
+                  };
+                  d.users.unshift(adminSeed);
+                  fetch(`${this.getBaseUrl()}/api/state`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: 'users', value: d.users })
+                  }).catch(() => {});
+                }
                 // If user is currently editing a user account in the modal, protect in-memory draft from being overwritten
                 if (!state.activeModal || (state.activeModal !== 'editUser' && state.activeModal !== 'addUser')) {
                   state.users = d.users;
