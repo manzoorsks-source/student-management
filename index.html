@@ -750,30 +750,35 @@
       }
     ];
 
-    // Staff Accounts with Human-Readable Passwords & Cryptographic Hashes
+    // Default Primary Administrator Account (Super Admin / Correspondent)
     const INITIAL_USERS = [
-      { empId: 'EMP-001', fullName: 'Mr. M. A. Manzoor', username: 'correspondent', password: 'admin123', passwordHash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', mobile: '+91 9121833702', email: 'correspondent@stvenushighschool.edu.in', role: 'super_admin', status: 'Active', timing: '8:30 AM – 4:30 PM', createdAt: '10-Jun-2026 09:00 AM', lastLogin: '27-Aug-2026 10:00 AM' },
-      { empId: 'EMP-002', fullName: 'Dr. S. K. Rao', username: 'principal', password: 'principal123', passwordHash: '3549f22fb8622a6d216ef2dcd592e04ed1f1e604cef032d7e5c425e8e72a878e', mobile: '+91 98490 20001', email: 'principal@stvenushighschool.edu.in', role: 'principal', status: 'Active', timing: '8:30 AM – 4:30 PM', createdAt: '10-Jun-2026 09:00 AM', lastLogin: '27-Aug-2026 09:30 AM' },
-      { empId: 'EMP-003', fullName: 'Mrs. P. Swathi', username: 'admin', password: 'admin123', passwordHash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', mobile: '+91 98490 20002', email: 'admin@stvenushighschool.edu.in', role: 'admin', status: 'Active', timing: '8:30 AM – 4:30 PM', createdAt: '10-Jun-2026 09:00 AM', lastLogin: '27-Aug-2026 09:15 AM' },
-      { empId: 'EMP-004', fullName: 'Mr. R. K. Sharma', username: 'accountant', password: 'accountant123', passwordHash: 'a3bb3e757cdafff78fe3aabe1055ccfdda164e5989eef213a683b5eecb3a0b64', mobile: '+91 98490 20003', email: 'accounts@stvenushighschool.edu.in', role: 'accountant', status: 'Active', timing: '8:30 AM – 4:30 PM', createdAt: '10-Jun-2026 09:00 AM', lastLogin: '27-Aug-2026 09:00 AM' }
+      {
+        empId: 'EMP-001',
+        fullName: 'Shaik Madar (Admin / Correspondent)',
+        username: 'shaikmadar786',
+        password: 'Shaik@786',
+        passwordHash: '9d5752ada6cd123fc7905ec6c4e89af4b4e8de924668fb33853ee1da394594f4',
+        mobile: '+91 9121833702',
+        email: 'correspondent@stvenushighschool.edu.in',
+        role: 'super_admin',
+        status: 'Active',
+        timing: '8:30 AM – 4:30 PM',
+        createdAt: '10-Jun-2026 09:00 AM',
+        lastLogin: 'Never'
+      }
     ];
 
     function loadUsersState() {
-      let loaded = safeLoadJson('stv_users_v12', INITIAL_USERS);
-      if (!Array.isArray(loaded) || loaded.length === 0) loaded = INITIAL_USERS;
+      let loaded = safeLoadJson('stv_users_v14', null);
+      if (!Array.isArray(loaded) || loaded.length === 0) {
+        loaded = INITIAL_USERS;
+      }
       return loaded.map(u => {
-        let plain = u.password;
-        if (!plain) {
-          if (u.username === 'correspondent' || u.empId === 'EMP-001') plain = 'admin123';
-          else if (u.username === 'principal' || u.empId === 'EMP-002') plain = 'principal123';
-          else if (u.username === 'admin' || u.empId === 'EMP-003') plain = 'admin123';
-          else if (u.username === 'accountant' || u.empId === 'EMP-004') plain = 'accountant123';
-          else plain = 'admin123';
-        }
+        let plain = u.password || (u.username === 'shaikmadar786' ? 'Shaik@786' : 'Shaik@786');
         return {
           ...u,
           password: plain,
-          passwordHash: u.passwordHash || (typeof sha256 === 'function' ? sha256(plain) : '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9'),
+          passwordHash: u.passwordHash || (typeof sha256 === 'function' ? sha256(plain) : '9d5752ada6cd123fc7905ec6c4e89af4b4e8de924668fb33853ee1da394594f4'),
           timing: u.timing || '8:30 AM – 4:30 PM',
           createdAt: u.createdAt || '10-Jun-2026 09:00 AM',
           lastLogin: u.lastLogin || 'Never'
@@ -1323,8 +1328,8 @@
     }
 
     function openEditFeeStructureModal() {
-      if (state.currentUser.role !== 'super_admin' && state.currentUser.username !== 'correspondent') {
-        alert('🔒 Access Denied! Only the Correspondent (Super Admin) can edit official school fee rates.');
+      if (!state.currentUser || state.currentUser.role !== 'super_admin') {
+        alert('🔒 Access Denied! Only the Administrator (Super Admin) can edit official school fee rates.');
         return;
       }
       state.activeModal = 'editFeeStructure';
@@ -3047,28 +3052,23 @@
 
                 ${state.loginError ? `<div class="bg-rose-50 border border-rose-200 text-rose-700 text-xs p-3 rounded-xl font-bold">${state.loginError}</div>` : ''}
 
-                <form onsubmit="handleLogin(event)" class="space-y-3 text-xs font-medium">
+                <form onsubmit="handleLogin(event)" class="space-y-4 text-xs font-medium">
                   <div>
-                    <label class="block text-slate-700 font-bold mb-1">Select Role</label>
-                    <select id="loginRole" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold text-xs">
-                      <option value="super_admin">Correspondent (Super Admin)</option>
-                      <option value="principal">Principal</option>
-                      <option value="admin">Administrator</option>
-                      <option value="accountant">Accountant</option>
-                    </select>
+                    <label class="block text-slate-700 font-bold mb-1">Username <span class="text-rose-600">*</span></label>
+                    <input id="loginUsername" required placeholder="Enter username (e.g. shaikmadar786)" autocomplete="username" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 font-bold text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none" />
                   </div>
 
                   <div>
-                    <label class="block text-slate-700 font-bold mb-1">Username</label>
-                    <input id="loginUsername" required placeholder="Enter username" autocomplete="username" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold text-xs" />
+                    <div class="flex justify-between items-center mb-1">
+                      <label class="block text-slate-700 font-bold">Password <span class="text-rose-600">*</span></label>
+                      <button type="button" onclick="const p = document.getElementById('loginPassword'); if(p.type==='password'){p.type='text'; this.innerText='🙈 Hide';}else{p.type='password'; this.innerText='👁️ Show';}" class="text-[10px] text-indigo-700 font-extrabold hover:underline cursor-pointer">
+                        👁️ Show
+                      </button>
+                    </div>
+                    <input type="password" id="loginPassword" required placeholder="Enter password (e.g. Shaik@786)" autocomplete="current-password" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 font-bold text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none" />
                   </div>
 
-                  <div>
-                    <label class="block text-slate-700 font-bold mb-1">Password</label>
-                    <input type="password" id="loginPassword" required placeholder="Enter password" autocomplete="current-password" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 font-bold text-xs" />
-                  </div>
-
-                  <button type="submit" class="w-full bg-sky-700 hover:bg-sky-800 text-white font-extrabold py-2.5 rounded-xl text-xs shadow-md active:scale-95 transition-all">
+                  <button type="submit" class="w-full bg-sky-700 hover:bg-sky-800 text-white font-extrabold py-3 rounded-xl text-xs shadow-md active:scale-95 transition-all cursor-pointer">
                     Sign In to School Portal &rarr;
                   </button>
                 </form>
@@ -3880,7 +3880,7 @@
                     <tbody class="divide-y text-slate-800 font-medium">
                       ${state.users.map(u => {
                         const isVisible = state.visiblePasswords && state.visiblePasswords[u.empId];
-                        const plainPwd = u.password || (u.username === 'correspondent' ? 'admin123' : (u.username === 'principal' ? 'principal123' : (u.username === 'accountant' ? 'accountant123' : 'admin123')));
+                        const plainPwd = u.password || '';
                         return `
                         <tr class="hover:bg-slate-50 ${u.status === 'Disabled' || u.status === 'Inactive' ? 'bg-rose-50/60' : ''}">
                           <td class="py-3.5 px-4 font-bold">
@@ -3931,7 +3931,7 @@
                           </td>
                           <td class="py-2.5 px-3 text-right space-x-1.5 whitespace-nowrap">
                             <button onclick="openEditUserModal('${u.empId}')" class="bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-1 rounded text-xs font-bold shadow-2xs">✏️ Edit</button>
-                            ${u.role !== 'super_admin' && u.username !== 'correspondent' && u.username !== 'superadmin' ? `
+                            ${u.empId !== 'EMP-001' && u.username !== 'shaikmadar786' ? `
                               <button onclick="deleteUserAccount('${u.empId}')" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 px-2.5 py-1 rounded text-xs font-bold shadow-2xs">🗑️ Remove</button>
                             ` : ''}
                           </td>
@@ -4307,7 +4307,7 @@
                       <h3 class="text-lg font-black font-display tracking-tight text-white mt-1">FEE STRUCTURE FOR THE ACADEMIC YEAR – 2026 – 2027</h3>
                       <p class="text-xs text-indigo-200">Official Class-wise Fee Schedule (Monthly Fee, Yearly Exam Fee & Total Yearly Package)</p>
                     </div>
-                    ${(state.currentUser.role === 'super_admin' || state.currentUser.username === 'correspondent') ? `
+                    ${state.currentUser && state.currentUser.role === 'super_admin' ? `
                       <button onclick="openEditFeeStructureModal()" class="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-4 py-2 rounded-xl text-xs shadow-md transition-all">
                         ⚙️ Edit Official Fee Rates (Super Admin)
                       </button>
@@ -5089,7 +5089,7 @@
                             </td>
                             <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
                               <button onclick="openEditTeacherModal('${t.id}')" class="bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-1 rounded text-xs font-bold shadow-2xs">✏️ Edit</button>
-                              ${(state.currentUser && (state.currentUser.role === 'admin' || state.currentUser.role === 'super_admin' || state.currentUser.username === 'correspondent')) ? `
+                              ${(state.currentUser && (state.currentUser.role === 'admin' || state.currentUser.role === 'super_admin')) ? `
                                 <button onclick="removeTeacher('${t.id}')" class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 px-2.5 py-1 rounded text-xs font-bold shadow-2xs">🗑️ Remove</button>
                               ` : ''}
                             </td>
@@ -9010,39 +9010,38 @@
       if (e) e.preventDefault();
       const uInp = document.getElementById('loginUsername');
       const pInp = document.getElementById('loginPassword');
-      const rInp = document.getElementById('loginRole');
       
       const u = uInp ? uInp.value.trim().toLowerCase() : '';
       const p = pInp ? pInp.value.trim() : '';
-      const selectedRole = rInp ? rInp.value : '';
 
-      const matchedUser = state.users.find(usr => usr.username.toLowerCase() === u);
+      if (!u || !p) {
+        state.loginError = '⚠️ Please enter both username and password.';
+        render();
+        return;
+      }
+
+      // Match username case-insensitively across state.users
+      const matchedUser = state.users.find(usr => (usr.username || '').toLowerCase() === u);
 
       if (!matchedUser) {
-        state.loginError = '⚠️ Access Denied! Username does not exist or this user account has been REMOVED by the Correspondent (Super Admin).';
-        saveState();
+        state.loginError = '⚠️ Access Denied! Username does not exist or this user account has been removed.';
+        render();
         return;
       }
 
       if (matchedUser.status === 'Disabled' || matchedUser.status === 'Inactive') {
-        state.loginError = `⚠️ Access Denied! User account "${matchedUser.fullName}" (${ROLES_CONFIG[matchedUser.role]?.name || matchedUser.role}) has been DISABLED by the Correspondent (Super Admin). Login is blocked.`;
-        saveState();
+        state.loginError = `⚠️ Access Denied! User account "${matchedUser.fullName}" is DISABLED. Login is blocked.`;
+        render();
         return;
       }
 
       const enteredHash = sha256(p);
       const isPasswordMatch = (matchedUser.password && matchedUser.password === p) ||
-                              (matchedUser.passwordHash && (matchedUser.passwordHash === enteredHash || matchedUser.passwordHash === p));
+                              (matchedUser.passwordHash && (matchedUser.passwordHash.toLowerCase() === enteredHash.toLowerCase() || matchedUser.passwordHash === p));
 
       if (!isPasswordMatch) {
-        state.loginError = '⚠️ Incorrect Password! Please check your password or contact the Correspondent (Super Admin).';
-        saveState();
-        return;
-      }
-
-      if (selectedRole && matchedUser.role !== selectedRole && matchedUser.role !== 'super_admin') {
-        state.loginError = `⚠️ Role Selection Mismatch! User "${matchedUser.username}" is registered as "${ROLES_CONFIG[matchedUser.role]?.name || matchedUser.role}".`;
-        saveState();
+        state.loginError = '⚠️ Incorrect Password! Please check your password.';
+        render();
         return;
       }
 
@@ -9051,36 +9050,14 @@
       state.loginError = '';
       state.viewMode = 'portal';
       
-      const roleConfig = ROLES_CONFIG[matchedUser.role] || ROLES_CONFIG['admin'];
-      state.activeTab = roleConfig.allowedTabs[0] || 'dashboard';
+      const roleConfig = ROLES_CONFIG[matchedUser.role] || ROLES_CONFIG['super_admin'] || ROLES_CONFIG['admin'];
+      state.activeTab = (roleConfig.allowedTabs && roleConfig.allowedTabs[0]) ? roleConfig.allowedTabs[0] : 'dashboard';
       state.activeModal = null;
-      saveState();
-      // Fetch latest live data from Aiven Cloud Database on user login
+      saveStateLocalOnly();
+      render();
+
+      // Refresh latest live data from Aiven PostgreSQL Cloud Database on successful login
       CloudSync.loadInitialData(false);
-    }
-
-    function quickDemoLogin(roleKey) {
-      const demoUser = state.users.find(u => u.role === roleKey);
-      if (!demoUser) {
-        alert(`⚠️ Access Denied! The user account for "${ROLES_CONFIG[roleKey]?.name || roleKey}" has been REMOVED from the system by the Correspondent (Super Admin). Login is blocked.`);
-        return;
-      }
-
-      if (demoUser.status === 'Disabled' || demoUser.status === 'Inactive') {
-        alert(`⚠️ Access Denied! The user account for "${demoUser.fullName}" (${ROLES_CONFIG[demoUser.role]?.name || demoUser.role}) has been DISABLED by the Correspondent (Super Admin). Login is blocked.`);
-        return;
-      }
-
-      demoUser.lastLogin = formatDateTime(new Date());
-      state.currentUser = demoUser;
-      state.loginError = '';
-      state.viewMode = 'portal';
-      const roleConfig = ROLES_CONFIG[demoUser.role] || ROLES_CONFIG['admin'];
-      state.activeTab = roleConfig.allowedTabs[0] || 'dashboard';
-      state.activeModal = null;
-      saveState();
-      // Refresh latest live data from Aiven Cloud Database on demo switch
-      CloudSync.loadInitialData(true);
     }
 
     function togglePasswordVisibility(empId) {
@@ -9190,8 +9167,8 @@
         return;
       }
       const u = state.users.find(usr => usr.empId === empId);
-      if (u && (u.username === 'correspondent' || u.username === 'superadmin' || u.role === 'super_admin')) {
-        alert('Action Blocked! Primary Correspondent (Super Admin) account cannot be deleted.');
+      if (u && (u.username === 'shaikmadar786' || u.empId === 'EMP-001')) {
+        alert('Action Blocked! Primary Administrator (shaikmadar786) account cannot be deleted.');
         return;
       }
       if (confirm(`⚠️ Are you sure you want to PERMANENTLY REMOVE user account "${u?.fullName}" (${u?.username})?\n\nOnce removed, this user will NOT be able to log in.`)) {
@@ -9242,7 +9219,7 @@
       if (isEdit && targetEmpId) {
         state.users = state.users.map(u => {
           if (u.empId === targetEmpId) {
-            const updatedPwd = password ? password : (u.password || 'admin123');
+            const updatedPwd = password ? password : (u.password || 'Shaik@786');
             return {
               ...u,
               fullName,
@@ -9581,7 +9558,7 @@
     }
 
     function removeAllStudents() {
-      const isCorrespondentOrAdmin = state.currentUser && (state.currentUser.role === 'admin' || state.currentUser.role === 'super_admin' || state.currentUser.username === 'correspondent');
+      const isCorrespondentOrAdmin = state.currentUser && (state.currentUser.role === 'admin' || state.currentUser.role === 'super_admin');
       if (!isCorrespondentOrAdmin) {
         alert("🔒 Access Denied! Only Correspondent / Administrator can delete all student records.");
         return;
@@ -10429,7 +10406,7 @@
     }
 
     function removeTeacher(id) {
-      const isCorrespondentOrAdmin = state.currentUser && (state.currentUser.role === 'admin' || state.currentUser.role === 'super_admin' || state.currentUser.username === 'correspondent');
+      const isCorrespondentOrAdmin = state.currentUser && (state.currentUser.role === 'admin' || state.currentUser.role === 'super_admin');
       if (!isCorrespondentOrAdmin) {
         alert("🔒 Access Denied! Only Correspondent / Administrator can delete faculty members from the roster.");
         return;
@@ -10910,7 +10887,7 @@
     }
 
     function removeSubject(sub) {
-      const isCorrespondentOrAdmin = state.currentUser && (state.currentUser.role === 'admin' || state.currentUser.role === 'super_admin' || state.currentUser.username === 'correspondent');
+      const isCorrespondentOrAdmin = state.currentUser && (state.currentUser.role === 'admin' || state.currentUser.role === 'super_admin');
       if (!isCorrespondentOrAdmin) {
         alert("🔒 Access Denied! Only Correspondent / Administrator can delete subjects from the curriculum.");
         return;
