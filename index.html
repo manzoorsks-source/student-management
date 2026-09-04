@@ -796,13 +796,31 @@
       }
     ];
 
+    // One-time client purge of old mock users from browser localStorage
+    try {
+      ['stv_users_v11', 'stv_users_v12', 'stv_users_v13', 'stv_users_v14', 'stv_users_v15'].forEach(k => {
+        const raw = localStorage.getItem(k);
+        if (raw && (raw.includes('correspondent') || raw.includes('Manzoor') || raw.includes('Swathi') || raw.includes('sharma@2026') || raw.includes('livetesting123') || raw.includes('Dr. S. K. Rao'))) {
+          localStorage.removeItem(k);
+        }
+      });
+    } catch(e) {}
+
     function loadUsersState() {
-      let loaded = safeLoadJson('stv_users_v12', null);
+      let loaded = safeLoadJson('stv_users_v20', null);
       if (!Array.isArray(loaded) || loaded.length === 0) {
         loaded = INITIAL_USERS;
       }
-      // Strictly purge legacy mock user 'correspondent' / 'Mr. M. A. Manzoor'
-      loaded = loaded.filter(u => u && u.username !== 'correspondent' && u.fullName !== 'Mr. M. A. Manzoor');
+      // Strictly purge legacy mock users
+      loaded = loaded.filter(u => {
+        if (!u) return false;
+        const usr = (u.username || '').toLowerCase().trim();
+        const fn = (u.fullName || '').toLowerCase().trim();
+        if (usr === 'correspondent' || usr === 'testing' || usr === 'sharma') return false;
+        if (fn.includes('manzoor') || fn.includes('s. k. rao') || fn.includes('swathi') || fn.includes('r. k. sharma') || fn === 'test') return false;
+        return true;
+      });
+
       if (loaded.length === 0 || !loaded.some(u => u.username === 'shaikmadar786')) {
         loaded = [INITIAL_USERS[0], ...loaded.filter(u => u.username !== 'shaikmadar786')];
       }
@@ -1028,11 +1046,15 @@
             if (stateJson.success && stateJson.data) {
               const d = stateJson.data;
               if (d.users && Array.isArray(d.users) && d.users.length > 0) {
-                // Permanently filter out and purge legacy user 'correspondent' / 'Mr. M. A. Manzoor'
-                const hadLegacyUser = d.users.some(u => u && (u.username === 'correspondent' || u.fullName === 'Mr. M. A. Manzoor' || (u.fullName && u.fullName.includes('Manzoor') && u.role === 'super_admin')));
-                if (hadLegacyUser) {
-                  d.users = d.users.filter(u => u && u.username !== 'correspondent' && u.fullName !== 'Mr. M. A. Manzoor' && !(u.fullName && u.fullName.includes('Manzoor') && u.role === 'super_admin'));
-                }
+                // Permanently filter out and purge all legacy mock users
+                d.users = d.users.filter(u => {
+                  if (!u) return false;
+                  const usr = (u.username || '').toLowerCase().trim();
+                  const fn = (u.fullName || '').toLowerCase().trim();
+                  if (usr === 'correspondent' || usr === 'testing' || usr === 'sharma') return false;
+                  if (fn.includes('manzoor') || fn.includes('s. k. rao') || fn.includes('swathi') || fn.includes('r. k. sharma') || fn === 'test') return false;
+                  return true;
+                });
 
                 // Ensure primary administrator account (shaikmadar786) is guaranteed in users list
                 const hasAdmin = d.users.some(u => (u.username || '').toLowerCase() === 'shaikmadar786');
@@ -1052,15 +1074,6 @@
                     lastLogin: 'Never'
                   };
                   d.users.unshift(adminSeed);
-                }
-
-                if (hadLegacyUser || !hasAdmin) {
-                  // Persist cleaned list immediately to Aiven PostgreSQL
-                  fetch(`${this.getBaseUrl()}/api/state`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ key: 'users', value: d.users })
-                  }).catch(() => {});
                 }
 
                 // If user is currently editing a user account in the modal, protect in-memory draft from being overwritten
@@ -1268,7 +1281,7 @@
       localStorage.setItem('stv_view_mode', state.viewMode);
       if (state.currentUser) localStorage.setItem('stv_auth_user_v12', JSON.stringify(state.currentUser));
       else localStorage.removeItem('stv_auth_user_v12');
-      localStorage.setItem('stv_users_v12', JSON.stringify(state.users));
+      localStorage.setItem('stv_users_v20', JSON.stringify(state.users));
       localStorage.setItem('stv_website_v12', JSON.stringify(state.website));
       localStorage.setItem('stv_override_logs_v12', JSON.stringify(state.overrideLogs));
       localStorage.setItem('stv_years_v11', JSON.stringify(state.availableYears));
