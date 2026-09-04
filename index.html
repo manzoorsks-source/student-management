@@ -999,7 +999,12 @@
             const stateJson = await stateRes.json();
             if (stateJson.success && stateJson.data) {
               const d = stateJson.data;
-              if (d.users) state.users = d.users;
+              if (d.users) {
+                // If user is currently editing a user account in the modal, protect in-memory draft from being overwritten
+                if (!state.activeModal || (state.activeModal !== 'editUser' && state.activeModal !== 'addUser')) {
+                  state.users = d.users;
+                }
+              }
               if (d.teachers) state.teachers = d.teachers;
               if (d.website) state.website = d.website;
               if (d.timetable) state.timetable = d.timetable;
@@ -1027,7 +1032,15 @@
           this.updateSyncBadge('connected', `Aiven Cloud DB Live (${state.students.length} Students)`);
           
           saveStateLocalOnly();
-          render();
+
+          // Only trigger full DOM re-render if user is NOT currently interacting with an open modal or input field
+          const isUserActivelyTyping = document.activeElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
+          if (silent && (state.activeModal || isUserActivelyTyping)) {
+            console.log('User is actively editing or modal is open; skipping silent background re-render.');
+          } else {
+            render();
+          }
+
           if (!silent && typeof showToast === 'function') {
             showToast(`🟢 Loaded ${state.students.length} students live from Aiven PostgreSQL Cloud Database!`);
           }
@@ -5252,8 +5265,8 @@
       // MODAL: ADD / EDIT USER (SUPER ADMIN ONLY)
       if (state.activeModal === 'addUser' || state.activeModal === 'editUser') {
         const isEdit = state.activeModal === 'editUser' && state.editingUser;
-        const u = isEdit ? state.editingUser : {};
-        const plainPwd = u.password || '';
+        const u = isEdit ? state.editingUser : (state.editingUser || {});
+        const plainPwd = u.password !== undefined ? u.password : '';
         return `
           <div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
             <div class="bg-white border text-slate-900 rounded-3xl max-w-lg w-full p-6 sm:p-7 space-y-5 shadow-2xl relative">
@@ -5269,18 +5282,18 @@
                 <div class="grid grid-cols-2 gap-3">
                   <div>
                     <label class="block text-slate-700 mb-1 font-bold">Employee ID <span class="text-rose-600">*</span></label>
-                    <input id="userEmpId" value="${u.empId || `EMP-${String(state.users.length + 1).padStart(3, '0')}`}" ${isEdit ? 'readonly' : ''} required class="w-full bg-slate-50 border rounded-xl px-3 py-2 font-mono font-bold text-slate-900" />
+                    <input id="userEmpId" value="${u.empId || `EMP-${String(state.users.length + 1).padStart(3, '0')}`}" ${isEdit ? 'readonly' : ''} oninput="if(state.editingUser) state.editingUser.empId = this.value;" required class="w-full bg-slate-50 border rounded-xl px-3 py-2 font-mono font-bold text-slate-900" />
                   </div>
                   <div>
                     <label class="block text-slate-700 mb-1 font-bold">Full Name <span class="text-rose-600">*</span></label>
-                    <input id="userFullName" value="${u.fullName || ''}" required placeholder="e.g. Mr. S. K. Sharma" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900" />
+                    <input id="userFullName" value="${u.fullName || ''}" oninput="if(state.editingUser) state.editingUser.fullName = this.value;" required placeholder="e.g. Mr. S. K. Sharma" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900" />
                   </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
                   <div>
                     <label class="block text-slate-700 mb-1 font-bold">Username <span class="text-rose-600">*</span></label>
-                    <input id="userUsername" value="${u.username || ''}" required placeholder="e.g. sksharma" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 font-mono font-bold text-indigo-900" />
+                    <input id="userUsername" value="${u.username || ''}" oninput="if(state.editingUser) state.editingUser.username = this.value;" required placeholder="e.g. sksharma" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 font-mono font-bold text-indigo-900" />
                   </div>
                   <div>
                     <div class="flex justify-between items-center mb-1">
@@ -5290,7 +5303,7 @@
                       </button>
                     </div>
                     <div class="relative">
-                      <input type="password" id="userPassword" value="${plainPwd}" ${isEdit ? '' : 'required'} placeholder="Enter staff password" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 font-mono font-bold text-slate-900" />
+                      <input type="password" id="userPassword" value="${plainPwd}" oninput="if(state.editingUser) state.editingUser.password = this.value;" ${isEdit ? '' : 'required'} placeholder="Enter staff password" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 font-mono font-bold text-slate-900" />
                     </div>
                   </div>
                 </div>
@@ -5298,18 +5311,18 @@
                 <div class="grid grid-cols-2 gap-3">
                   <div>
                     <label class="block text-slate-700 mb-1 font-bold">Mobile Number <span class="text-rose-600">*</span></label>
-                    <input id="userMobile" value="${u.mobile || ''}" required placeholder="+91 98490..." class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900 font-mono" />
+                    <input id="userMobile" value="${u.mobile || ''}" oninput="if(state.editingUser) state.editingUser.mobile = this.value;" required placeholder="+91 98490..." class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900 font-mono" />
                   </div>
                   <div>
                     <label class="block text-slate-700 mb-1 font-bold">Email Address <span class="text-rose-600">*</span></label>
-                    <input type="email" id="userEmail" value="${u.email || ''}" required placeholder="staff@stvenushighschool.edu.in" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900" />
+                    <input type="email" id="userEmail" value="${u.email || ''}" oninput="if(state.editingUser) state.editingUser.email = this.value;" required placeholder="staff@stvenushighschool.edu.in" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900" />
                   </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
                   <div>
                     <label class="block text-slate-700 mb-1 font-bold">Shift / Duty Timing <span class="text-rose-600">*</span></label>
-                    <select id="userTiming" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900 cursor-pointer">
+                    <select id="userTiming" onchange="if(state.editingUser) state.editingUser.timing = this.value;" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900 cursor-pointer">
                       <option value="8:30 AM – 4:30 PM" ${(!u.timing || u.timing === '8:30 AM – 4:30 PM') ? 'selected' : ''}>8:30 AM – 4:30 PM (General Shift)</option>
                       <option value="8:00 AM – 5:00 PM" ${u.timing === '8:00 AM – 5:00 PM' ? 'selected' : ''}>8:00 AM – 5:00 PM (Admin / Office)</option>
                       <option value="8:30 AM – 3:30 PM" ${u.timing === '8:30 AM – 3:30 PM' ? 'selected' : ''}>8:30 AM – 3:30 PM (Primary Staff)</option>
@@ -5318,7 +5331,7 @@
                   </div>
                   <div>
                     <label class="block text-slate-700 mb-1 font-bold">Assigned System Role <span class="text-rose-600">*</span></label>
-                    <select id="userRole" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900 cursor-pointer">
+                    <select id="userRole" onchange="if(state.editingUser) state.editingUser.role = this.value;" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900 cursor-pointer">
                       <option value="super_admin" ${u.role === 'super_admin' ? 'selected' : ''}>Super Admin / Correspondent</option>
                       <option value="principal" ${u.role === 'principal' ? 'selected' : ''}>Principal</option>
                       <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Administrator</option>
@@ -5332,7 +5345,7 @@
                 <div class="grid grid-cols-2 gap-3">
                   <div>
                     <label class="block text-slate-700 mb-1 font-bold">Account Status</label>
-                    <select id="userStatus" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900 cursor-pointer">
+                    <select id="userStatus" onchange="if(state.editingUser) state.editingUser.status = this.value;" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900 cursor-pointer">
                       <option value="Active" ${u.status !== 'Inactive' && u.status !== 'Disabled' ? 'selected' : ''}>🟢 Active</option>
                       <option value="Disabled" ${u.status === 'Inactive' || u.status === 'Disabled' ? 'selected' : ''}>🔴 Disabled</option>
                     </select>
@@ -9113,9 +9126,20 @@
         alert('Permission Denied! Only Super Admin / Correspondent can create new users.');
         return;
       }
-      state.editingUser = null;
+      state.editingUser = {
+        empId: `EMP-${String(state.users.length + 1).padStart(3, '0')}`,
+        fullName: '',
+        username: '',
+        password: '',
+        mobile: '',
+        email: '',
+        timing: '8:30 AM – 4:30 PM',
+        role: 'teacher',
+        status: 'Active',
+        createdAt: formatDateTime(new Date())
+      };
       state.activeModal = 'addUser';
-      saveState();
+      render();
     }
 
     function openEditUserModal(empId) {
@@ -9125,13 +9149,13 @@
       }
       const u = state.users.find(usr => usr.empId === empId);
       if (u) {
-        state.editingUser = u;
+        state.editingUser = JSON.parse(JSON.stringify(u));
         state.activeModal = 'editUser';
-        saveState();
+        render();
       }
     }
 
-    function toggleUserStatus(empId) {
+    async function toggleUserStatus(empId) {
       if (state.currentUser?.role !== 'super_admin') {
         alert('Permission Denied! Only Super Admin / Correspondent can change user status.');
         return;
@@ -9146,8 +9170,10 @@
         }
         return u;
       });
-      CloudSync.saveStateKey('users', state.users);
-      saveState();
+      saveStateLocalOnly();
+      render();
+      await CloudSync.saveStateKey('users', state.users);
+      await CloudSync.syncAppStateImmediate();
 
       if (targetUser) {
         if (updatedStatus === 'Disabled') {
@@ -9158,7 +9184,7 @@
       }
     }
 
-    function deleteUserAccount(empId) {
+    async function deleteUserAccount(empId) {
       if (state.currentUser?.role !== 'super_admin') {
         alert('Permission Denied! Only Super Admin / Correspondent can delete user accounts.');
         return;
@@ -9170,30 +9196,52 @@
       }
       if (confirm(`⚠️ Are you sure you want to PERMANENTLY REMOVE user account "${u?.fullName}" (${u?.username})?\n\nOnce removed, this user will NOT be able to log in.`)) {
         state.users = state.users.filter(usr => usr.empId !== empId);
-        CloudSync.saveStateKey('users', state.users);
-        saveState();
+        saveStateLocalOnly();
+        render();
+        await CloudSync.saveStateKey('users', state.users);
+        await CloudSync.syncAppStateImmediate();
         alert(`🗑️ User account "${u?.fullName}" has been REMOVED from the system! Login is blocked.`);
       }
     }
 
-    function saveUserAccount(e) {
+    async function saveUserAccount(e) {
       e.preventDefault();
       if (state.currentUser?.role !== 'super_admin') return;
 
-      const empId = document.getElementById('userEmpId') ? document.getElementById('userEmpId').value.trim() : `EMP-${String(state.users.length + 1).padStart(3, '0')}`;
-      const fullName = document.getElementById('userFullName').value.trim();
-      const username = document.getElementById('userUsername').value.trim().toLowerCase();
-      const password = document.getElementById('userPassword').value.trim();
-      const mobile = document.getElementById('userMobile').value.trim();
-      const email = document.getElementById('userEmail').value.trim();
-      const role = document.getElementById('userRole').value;
-      const status = document.getElementById('userStatus').value;
-      const timing = document.getElementById('userTiming') ? document.getElementById('userTiming').value : '8:30 AM – 4:30 PM';
-      const createdAt = document.getElementById('userCreatedAt') ? document.getElementById('userCreatedAt').value : formatDateTime(new Date());
+      const empIdInp = document.getElementById('userEmpId');
+      const fullNameInp = document.getElementById('userFullName');
+      const usernameInp = document.getElementById('userUsername');
+      const passwordInp = document.getElementById('userPassword');
+      const mobileInp = document.getElementById('userMobile');
+      const emailInp = document.getElementById('userEmail');
+      const roleInp = document.getElementById('userRole');
+      const statusInp = document.getElementById('userStatus');
+      const timingInp = document.getElementById('userTiming');
+      const createdAtInp = document.getElementById('userCreatedAt');
 
-      if (state.editingUser) {
+      const empId = empIdInp ? empIdInp.value.trim() : (state.editingUser?.empId || `EMP-${String(state.users.length + 1).padStart(3, '0')}`);
+      const fullName = fullNameInp ? fullNameInp.value.trim() : (state.editingUser?.fullName || '');
+      const username = usernameInp ? usernameInp.value.trim().toLowerCase() : (state.editingUser?.username || '');
+      const password = passwordInp ? passwordInp.value.trim() : (state.editingUser?.password || '');
+      const mobile = mobileInp ? mobileInp.value.trim() : (state.editingUser?.mobile || '');
+      const email = emailInp ? emailInp.value.trim() : (state.editingUser?.email || '');
+      const role = roleInp ? roleInp.value : (state.editingUser?.role || 'teacher');
+      const status = statusInp ? statusInp.value : (state.editingUser?.status || 'Active');
+      const timing = timingInp ? timingInp.value : (state.editingUser?.timing || '8:30 AM – 4:30 PM');
+      const createdAt = createdAtInp ? createdAtInp.value : (state.editingUser?.createdAt || formatDateTime(new Date()));
+
+      if (!fullName || !username) {
+        alert('⚠️ Please fill in both Full Name and Username.');
+        return;
+      }
+
+      const isEdit = state.activeModal === 'editUser' && state.editingUser;
+      const targetEmpId = state.editingUser ? state.editingUser.empId : null;
+      const oldUsername = state.editingUser ? state.editingUser.username : null;
+
+      if (isEdit && targetEmpId) {
         state.users = state.users.map(u => {
-          if (u.empId === state.editingUser.empId) {
+          if (u.empId === targetEmpId) {
             const updatedPwd = password ? password : (u.password || 'admin123');
             return {
               ...u,
@@ -9211,6 +9259,20 @@
           }
           return u;
         });
+
+        // Update active logged-in session if super admin modified their own account credentials
+        if (state.currentUser && (state.currentUser.empId === targetEmpId || state.currentUser.username === oldUsername)) {
+          const updatedPwd = password ? password : (state.currentUser.password || 'admin123');
+          state.currentUser = {
+            ...state.currentUser,
+            fullName,
+            username,
+            role,
+            password: updatedPwd,
+            passwordHash: sha256(updatedPwd)
+          };
+          localStorage.setItem('stv_auth_user_v12', JSON.stringify(state.currentUser));
+        }
       } else {
         const plainPwd = password || 'admin123';
         const newUser = {
@@ -9232,9 +9294,14 @@
 
       state.activeModal = null;
       state.editingUser = null;
-      CloudSync.saveStateKey('users', state.users);
-      saveState();
-      alert(`✅ Staff User Account "${fullName}" (${username}) has been successfully saved into the system!`);
+      saveStateLocalOnly();
+      render();
+
+      // Immediate and reliable write to Aiven PostgreSQL Cloud Database
+      await CloudSync.saveStateKey('users', state.users);
+      await CloudSync.syncAppStateImmediate();
+
+      alert(`✅ Staff User Account "${fullName}" (${username}) has been permanently saved into the Aiven Cloud Database!`);
     }
 
     // PUBLIC WEBSITE & CMS FUNCTIONS
