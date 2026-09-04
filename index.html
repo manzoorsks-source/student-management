@@ -1105,10 +1105,35 @@
         }
       },
 
+      async saveAttendanceSingle(studentId, status, targetDate, reason) {
+        if (!studentId) return;
+        try {
+          this.updateSyncBadge('syncing', `Saving attendance (${studentId})...`);
+          const res = await fetch(`${this.getBaseUrl()}/api/attendance`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              targetDate: targetDate || getTodayIsoDate(),
+              singleUpdate: {
+                id: studentId,
+                status: status || 'Present',
+                reason: reason || (status === 'Absent' ? 'Absent / Sick Leave' : '')
+              }
+            })
+          });
+          if (res.ok) {
+            this.updateSyncBadge('connected', 'Attendance Saved to Aiven Cloud!');
+            setTimeout(() => this.updateSyncBadge('connected', `Aiven Cloud DB Live (${state.students.length} Students)`), 2500);
+          }
+        } catch (e) {
+          console.warn('Failed to save single attendance to cloud:', e.message);
+        }
+      },
+
       async saveAttendance(attendanceMap, targetDate, studentUpdates) {
         try {
           this.updateSyncBadge('syncing', 'Saving attendance in Aiven Cloud...');
-          await fetch(`${this.getBaseUrl()}/api/attendance`, {
+          const res = await fetch(`${this.getBaseUrl()}/api/attendance`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1121,6 +1146,18 @@
           setTimeout(() => this.updateSyncBadge('connected', `Aiven Cloud DB Live (${state.students.length} Students)`), 2500);
         } catch (e) {
           console.warn('Failed to save attendance to cloud:', e.message);
+        }
+      },
+
+      async saveStateKey(key, value) {
+        try {
+          await fetch(`${this.getBaseUrl()}/api/state`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key, value })
+          });
+        } catch (e) {
+          console.warn(`Failed to save state key ${key} to cloud:`, e.message);
         }
       },
 
@@ -1303,6 +1340,7 @@
       });
 
       state.classFeeStructure = feeMap;
+      CloudSync.saveStateKey('classFeeStructure', feeMap);
       saveState();
       closeModal();
       alert('✅ ST. VENUS HIGH SCHOOL Official Fee Structure updated successfully by Correspondent!');
@@ -1323,12 +1361,17 @@
     }
 
     function saveStudentNotes(studentId, notesText) {
+      let updatedStud = null;
       state.students = state.students.map(s => {
         if (s.id === studentId) {
-          return { ...s, additionalNotes: notesText, remarks: notesText };
+          updatedStud = { ...s, additionalNotes: notesText, remarks: notesText };
+          return updatedStud;
         }
         return s;
       });
+      if (updatedStud) {
+        CloudSync.saveStudent(updatedStud);
+      }
       saveState();
       alert('💾 Additional student notes and instructions saved successfully!');
     }
@@ -1340,9 +1383,10 @@
       const lastWorkDate = document.getElementById('lastWorkDateInput') ? document.getElementById('lastWorkDateInput').value : '2026-08-05';
       const reason = document.getElementById('tcReasonInput') ? document.getElementById('tcReasonInput').value : "Parent's Transfer / School Change";
 
+      let updatedStud = null;
       state.students = state.students.map(s => {
         if (s.id === studentId) {
-          return {
+          updatedStud = {
             ...s,
             status: 'Transferred',
             tcNo: tcNo,
@@ -1351,6 +1395,7 @@
             tcReason: reason,
             remarks: `Transferred / TC Issued on ${tcDate} (${reason})`
           };
+          return updatedStud;
         }
         return s;
       });
@@ -1361,6 +1406,10 @@
         state.modalStudent.tcIssueDate = tcDate;
         state.modalStudent.lastWorkingDate = lastWorkDate;
         state.modalStudent.tcReason = reason;
+      }
+
+      if (updatedStud) {
+        CloudSync.saveStudent(updatedStud);
       }
 
       saveState();
@@ -1499,6 +1548,8 @@
       state.attendanceMap = {};
       state.activeAcademicYear = nextYear;
       state.activeModal = null;
+      CloudSync.saveBulkStudents(promotedStudents);
+      CloudSync.syncAppStateImmediate();
       saveState();
       alert(`🎉 Academic Year ${currentYear} has been Closed & Locked!\n\nAcademic Year ${nextYear} is now ACTIVE! All students promoted class-by-class, 10th Class marked as Alumni, and new Nursery admissions initialized.`);
     }
@@ -8826,6 +8877,7 @@
       const dStr = state.modalSelectedDate;
       const studId = state.modalStudent.id;
 
+      let updatedStud = null;
       state.students = state.students.map(s => {
         if (s.id === studId) {
           const history = s.attendanceHistory || {};
@@ -8833,7 +8885,8 @@
             ...history,
             [dStr]: { date: dStr, status, reason, leaveApproved, updatedAt: new Date().toISOString() }
           };
-          return { ...s, attendanceHistory: updatedHistory };
+          updatedStud = { ...s, attendanceHistory: updatedHistory };
+          return updatedStud;
         }
         return s;
       });
@@ -8843,10 +8896,16 @@
         state.attendanceMap[studId] = status;
       }
 
+      if (updatedStud) {
+        CloudSync.saveAttendanceSingle(studId, status, dStr, reason);
+        CloudSync.saveStudent(updatedStud);
+      }
+
       closeModal();
     }
 
     function markPresentFromCalendar(studentId, isoDate) {
+      let updatedStud = null;
       state.students = state.students.map(s => {
         if (s.id === studentId) {
           const history = s.attendanceHistory || {};
@@ -8854,13 +8913,18 @@
             ...history,
             [isoDate]: { date: isoDate, status: 'Present', reason: '', leaveApproved: true, updatedAt: new Date().toISOString() }
           };
-          return { ...s, attendanceHistory: updatedHistory };
+          updatedStud = { ...s, attendanceHistory: updatedHistory };
+          return updatedStud;
         }
         return s;
       });
       if (isoDate === getTodayIsoDate()) {
         if (!state.attendanceMap) state.attendanceMap = {};
         state.attendanceMap[studentId] = 'Present';
+      }
+      if (updatedStud) {
+        CloudSync.saveAttendanceSingle(studentId, 'Present', isoDate, '');
+        CloudSync.saveStudent(updatedStud);
       }
       saveState();
     }
@@ -9009,6 +9073,8 @@
       state.activeTab = roleConfig.allowedTabs[0] || 'dashboard';
       state.activeModal = null;
       saveState();
+      // Refresh latest live data from Aiven Cloud Database on demo switch
+      CloudSync.loadInitialData(true);
     }
 
     function togglePasswordVisibility(empId) {
@@ -9044,6 +9110,8 @@
       state.fullProfileStudentId = null;
       state.activeModal = null;
       saveState();
+      // Silently refresh latest database state on tab change
+      CloudSync.loadInitialData(true);
     }
 
     // USER MANAGEMENT FUNCTIONS (CORRESPONDENT / SUPER ADMIN ONLY)
@@ -9085,6 +9153,7 @@
         }
         return u;
       });
+      CloudSync.saveStateKey('users', state.users);
       saveState();
 
       if (targetUser) {
@@ -9108,6 +9177,7 @@
       }
       if (confirm(`⚠️ Are you sure you want to PERMANENTLY REMOVE user account "${u?.fullName}" (${u?.username})?\n\nOnce removed, this user will NOT be able to log in.`)) {
         state.users = state.users.filter(usr => usr.empId !== empId);
+        CloudSync.saveStateKey('users', state.users);
         saveState();
         alert(`🗑️ User account "${u?.fullName}" has been REMOVED from the system! Login is blocked.`);
       }
@@ -9169,6 +9239,7 @@
 
       state.activeModal = null;
       state.editingUser = null;
+      CloudSync.saveStateKey('users', state.users);
       saveState();
       alert(`✅ Staff User Account "${fullName}" (${username}) has been successfully saved into the system!`);
     }
@@ -9192,6 +9263,7 @@
 
       state.website.reviews.push(newReview);
       state.reviewSubmissionMsg = 'Thank you! Your review has been submitted successfully and will appear publicly after Super Admin approval.';
+      CloudSync.saveStateKey('website', state.website);
       saveState();
       setTimeout(() => { state.reviewSubmissionMsg = ''; render(); }, 5000);
     }
@@ -9206,12 +9278,14 @@
     function approveReview(id) {
       if (state.currentUser?.role !== 'super_admin') return;
       state.website.reviews = state.website.reviews.map(r => r.id === id ? { ...r, status: 'Approved' } : r);
+      CloudSync.saveStateKey('website', state.website);
       saveState();
     }
 
     function rejectReview(id) {
       if (state.currentUser?.role !== 'super_admin') return;
       state.website.reviews = state.website.reviews.filter(r => r.id !== id);
+      CloudSync.saveStateKey('website', state.website);
       saveState();
     }
 
@@ -9234,6 +9308,7 @@
       state.website.contactInfo.email = document.getElementById('cmsEmail').value;
       state.website.contactInfo.officeHours = document.getElementById('cmsOfficeHours').value;
 
+      CloudSync.saveStateKey('website', state.website);
       saveState();
       alert('Website CMS Settings Updated Successfully! Changes are live on the Public Website.');
     }
@@ -9716,6 +9791,7 @@
         }
         return row;
       });
+      CloudSync.saveStateKey('timetable', state.timetable);
       saveState();
     }
 
@@ -9725,8 +9801,7 @@
     }
 
     function markPresentFromModal(studentId) {
-      state.attendanceMap[studentId] = 'Present';
-      saveState();
+      setAttendance(studentId, 'Present', getTodayIsoDate());
     }
 
     function sendParentAbsenceAlert(studentName, parentPhone) {
@@ -10222,6 +10297,7 @@
       };
 
       state.teachers.push(newT);
+      CloudSync.saveStateKey('teachers', state.teachers);
       closeModal();
       alert(`✅ Faculty Teacher "${name}" (${newT.teacherCode}) has been successfully added to the roster!`);
     }
@@ -10287,6 +10363,7 @@
         return t;
       });
 
+      CloudSync.saveStateKey('teachers', state.teachers);
       closeModal();
       alert(`✅ Faculty Teacher "${name}" details have been successfully updated!`);
     }
@@ -10301,6 +10378,7 @@
       const name = teacher ? teacher.name : 'this faculty member';
       if (confirm(`⚠️ Are you sure you want to remove "${name}" from the Faculty Roster?`)) {
         state.teachers = state.teachers.filter(t => t.id !== id);
+        CloudSync.saveStateKey('teachers', state.teachers);
         saveState();
         alert(`🗑️ "${name}" has been successfully removed from the Faculty Roster.`);
       }
@@ -10314,6 +10392,7 @@
         }
         return t;
       });
+      CloudSync.saveStateKey('teachers', state.teachers);
       saveState();
     }
 
@@ -10542,8 +10621,8 @@
         state.students = state.students.map(s => s.id === state.modalStudent.id ? updatedRecord : s);
       } else {
         state.students.unshift(updatedRecord);
-        CloudSync.saveStudent(updatedRecord);
       }
+      CloudSync.saveStudent(updatedRecord);
 
       closeModal();
     }
@@ -10765,6 +10844,7 @@
       const val = document.getElementById('newSubjInput').value.trim();
       if (val && !state.subjects.includes(val)) {
         state.subjects.push(val);
+        CloudSync.saveStateKey('subjects', state.subjects);
       }
       saveState();
     }
@@ -10777,6 +10857,7 @@
       }
       if (confirm(`Remove subject ${sub}?`)) {
         state.subjects = state.subjects.filter(s => s !== sub);
+        CloudSync.saveStateKey('subjects', state.subjects);
         saveState();
       }
     }
@@ -10832,6 +10913,11 @@
       if (dStr === getTodayIsoDate()) {
         state.attendanceMap[id] = st;
       }
+      // Save directly to Aiven PostgreSQL Cloud DB
+      CloudSync.saveAttendanceSingle(id, st, dStr, student?.attendanceHistory?.[dStr]?.reason);
+      if (student) {
+        CloudSync.saveStudent(student);
+      }
       saveState();
     }
 
@@ -10851,6 +10937,7 @@
           state.attendanceMap[s.id] = 'Present';
         }
       });
+      CloudSync.saveAttendance(state.attendanceMap, dStr);
       saveState();
       showToast(`🟢 All ${filtered.length} students marked Present for ${formatIsoDateNice(dStr)}!`);
     }
@@ -10865,29 +10952,38 @@
     function addTask(e) {
       e.preventDefault();
       const val = document.getElementById('newTaskInput').value.trim();
-      if (val) { state.tasks.unshift({ id: Date.now(), title: val, completed: false }); }
+      if (val) {
+        state.tasks.unshift({ id: Date.now(), title: val, completed: false });
+        CloudSync.saveStateKey('tasks', state.tasks);
+      }
       saveState();
     }
 
     function toggleTask(id) {
       state.tasks = state.tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+      CloudSync.saveStateKey('tasks', state.tasks);
       saveState();
     }
 
     function deleteTask(id) {
       state.tasks = state.tasks.filter(t => t.id !== id);
+      CloudSync.saveStateKey('tasks', state.tasks);
       saveState();
     }
 
     function addNote(e) {
       e.preventDefault();
       const val = document.getElementById('newNoteInput').value.trim();
-      if (val) { state.notes.unshift({ id: Date.now(), text: val, date: '02-Aug-2026' }); }
+      if (val) {
+        state.notes.unshift({ id: Date.now(), text: val, date: '02-Aug-2026' });
+        CloudSync.saveStateKey('notes', state.notes);
+      }
       saveState();
     }
 
     function deleteNote(id) {
       state.notes = state.notes.filter(n => n.id !== id);
+      CloudSync.saveStateKey('notes', state.notes);
       saveState();
     }
 
