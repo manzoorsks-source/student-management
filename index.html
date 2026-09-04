@@ -750,7 +750,7 @@
       }
     ];
 
-    // Default Primary Administrator Account (Super Admin / Correspondent)
+    // Default Initial System Users (Super Admin, Principal, Accountant)
     const INITIAL_USERS = [
       {
         empId: 'EMP-001',
@@ -765,20 +765,48 @@
         timing: '8:30 AM – 4:30 PM',
         createdAt: '10-Jun-2026 09:00 AM',
         lastLogin: 'Never'
+      },
+      {
+        empId: 'EMP-002',
+        fullName: 'Mrs. Sunitha Devi (Principal)',
+        username: 'principal',
+        password: 'admin123',
+        passwordHash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',
+        mobile: '+91 9848022338',
+        email: 'principal@stvenushighschool.edu.in',
+        role: 'principal',
+        status: 'Active',
+        timing: '8:00 AM – 5:00 PM',
+        createdAt: '10-Jun-2026 09:00 AM',
+        lastLogin: 'Never'
+      },
+      {
+        empId: 'EMP-003',
+        fullName: 'Mr. K. Ramesh (Accountant)',
+        username: 'accountant',
+        password: 'admin123',
+        passwordHash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',
+        mobile: '+91 9121833703',
+        email: 'accounts@stvenushighschool.edu.in',
+        role: 'accountant',
+        status: 'Active',
+        timing: '8:30 AM – 4:30 PM',
+        createdAt: '10-Jun-2026 09:00 AM',
+        lastLogin: 'Never'
       }
     ];
 
     function loadUsersState() {
-      let loaded = safeLoadJson('stv_users_v14', null);
+      let loaded = safeLoadJson('stv_users_v12', null);
       if (!Array.isArray(loaded) || loaded.length === 0) {
         loaded = INITIAL_USERS;
       }
       return loaded.map(u => {
-        let plain = u.password || (u.username === 'shaikmadar786' ? 'Shaik@786' : 'Shaik@786');
+        let plain = u.password || (u.username === 'shaikmadar786' ? 'Shaik@786' : 'admin123');
         return {
           ...u,
           password: plain,
-          passwordHash: u.passwordHash || (typeof sha256 === 'function' ? sha256(plain) : '9d5752ada6cd123fc7905ec6c4e89af4b4e8de924668fb33853ee1da394594f4'),
+          passwordHash: u.passwordHash || (typeof sha256 === 'function' ? sha256(plain) : ''),
           timing: u.timing || '8:30 AM – 4:30 PM',
           createdAt: u.createdAt || '10-Jun-2026 09:00 AM',
           lastLogin: u.lastLogin || 'Never'
@@ -1196,8 +1224,7 @@
     }
   
 
-    function saveState() {
-      CloudSync.syncAppStateDebounced();
+    function saveStateLocalOnly() {
       localStorage.setItem('stv_view_mode', state.viewMode);
       if (state.currentUser) localStorage.setItem('stv_auth_user_v12', JSON.stringify(state.currentUser));
       else localStorage.removeItem('stv_auth_user_v12');
@@ -1225,6 +1252,11 @@
       localStorage.setItem('stv_attendance_cal_month', JSON.stringify(state.selectedCalendarMonth !== undefined ? state.selectedCalendarMonth : 7));
       localStorage.setItem('stv_notes_v10', JSON.stringify(state.notes));
       localStorage.setItem('stv_tasks_v10', JSON.stringify(state.tasks));
+    }
+
+    function saveState() {
+      saveStateLocalOnly();
+      CloudSync.syncAppStateDebounced();
       render();
     }
 
@@ -9191,7 +9223,12 @@
           createdAt: formatDateTime(new Date()),
           lastLogin: 'Never'
         };
-        state.users.push(newUser);
+        const existingIdx = state.users.findIndex(u => (u.username || '').toLowerCase() === username);
+        if (existingIdx >= 0) {
+          state.users[existingIdx] = newUser;
+        } else {
+          state.users.push(newUser);
+        }
       }
 
       state.activeModal = null;
@@ -9199,8 +9236,12 @@
       saveStateLocalOnly();
       render();
 
-      await CloudSync.saveStateKey('users', state.users);
-      await CloudSync.syncAppStateImmediate();
+      try {
+        await CloudSync.saveStateKey('users', state.users);
+        await CloudSync.syncAppStateImmediate();
+      } catch (err) {
+        console.warn('User cloud sync warning:', err);
+      }
 
       showToast('Changes saved successfully.');
     }
