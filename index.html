@@ -912,7 +912,8 @@
 
     
     // =========================================================================
-    // AIVEN POSTGRESQL REAL-TIME CLOUD DATABASE SYNCHRONIZATION ENGINE
+    // =========================================================================
+    // CENTRAL BACKEND DATABASE SYNCHRONIZATION ENGINE
     // =========================================================================
     const CloudSync = {
       isOnline: true,
@@ -937,7 +938,6 @@
       async saveBulkStudents(studentsList) {
         if (!Array.isArray(studentsList) || studentsList.length === 0) return;
         try {
-          this.updateSyncBadge('syncing', `Saving ${studentsList.length} students to Aiven Cloud...`);
           const res = await fetch(`${this.getBaseUrl()}/api/students`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -945,14 +945,9 @@
           });
           if (res.ok) {
             studentsList.forEach(s => this.dirtyStudentIds.delete(s.id));
-            this.updateSyncBadge('connected', `Aiven Cloud DB Live (${state.students.length} Students)`);
-            console.log(`☁️ Successfully synced ${studentsList.length} students to Aiven PostgreSQL!`);
-          } else {
-            console.error('Bulk student sync returned error');
           }
         } catch (e) {
-          console.warn('Failed to bulk sync students to cloud:', e.message);
-          this.updateSyncBadge('offline', 'Offline (Saved Locally)');
+          console.warn('Failed to save students to database:', e.message);
         }
       },
 
@@ -972,33 +967,28 @@
         try {
           const res = await fetch(`${this.getBaseUrl()}/api/health`);
           if (res.ok) {
-            const data = await res.json();
             this.isOnline = true;
-            this.updateSyncBadge('connected', `Aiven Cloud DB Live (${data.studentCount || state.students.length} Students)`);
             return true;
           }
         } catch (e) {
-          console.warn('Cloud Database Health Check Failed:', e.message);
+          console.warn('Database connection check failed:', e.message);
         }
         this.isOnline = false;
-        this.updateSyncBadge('offline', 'Offline (Local Cache)');
         return false;
       },
 
       async loadInitialData(silent = false) {
-        if (!silent) this.updateSyncBadge('syncing', 'Connecting to Aiven Cloud DB...');
         try {
-          // 1. Fetch Students from Aiven PostgreSQL
+          // 1. Fetch Students from central database
           const studentsRes = await fetch(`${this.getBaseUrl()}/api/students`);
           if (studentsRes.ok) {
             const studentsJson = await studentsRes.json();
             if (studentsJson.success && Array.isArray(studentsJson.data) && studentsJson.data.length > 0) {
               state.students = studentsJson.data;
-              console.log(`☁️ Loaded ${studentsJson.data.length} students from Aiven PostgreSQL!`);
             }
           }
 
-          // 2. Fetch App State from Aiven PostgreSQL
+          // 2. Fetch App State from central database
           const stateRes = await fetch(`${this.getBaseUrl()}/api/state`);
           if (stateRes.ok) {
             const stateJson = await stateRes.json();
@@ -1028,70 +1018,54 @@
               if (d.attendanceMap) state.attendanceMap = d.attendanceMap;
               if (d.broadcastLogs) state.broadcastLogs = d.broadcastLogs;
               if (d.overrideLogs) state.overrideLogs = d.overrideLogs;
-              console.log('☁️ Loaded application state keys from Aiven PostgreSQL!');
             }
           }
 
           this.isOnline = true;
           this.lastSyncTime = new Date();
-          this.updateSyncBadge('connected', `Aiven Cloud DB Live (${state.students.length} Students)`);
           
           saveStateLocalOnly();
 
           // Only trigger full DOM re-render if user is NOT currently interacting with an open modal or input field
           const isUserActivelyTyping = document.activeElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
           if (silent && (state.activeModal || isUserActivelyTyping)) {
-            console.log('User is actively editing or modal is open; skipping silent background re-render.');
+            // Background sync silent mode
           } else {
             render();
           }
-
-          if (!silent && typeof showToast === 'function') {
-            showToast(`🟢 Loaded ${state.students.length} students live from Aiven PostgreSQL Cloud Database!`);
-          }
         } catch (err) {
-          console.warn('Could not load from cloud DB, using local data:', err.message);
+          console.warn('Could not load from central database, using local data:', err.message);
           this.isOnline = false;
-          this.updateSyncBadge('offline', 'Offline (Local Cache)');
         }
       },
 
       async saveStudent(student) {
         if (!student || !student.id) return;
         try {
-          this.updateSyncBadge('syncing', 'Saving to Aiven Cloud DB...');
-          const res = await fetch(`${this.getBaseUrl()}/api/students`, {
+          await fetch(`${this.getBaseUrl()}/api/students`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ student })
           });
-          if (res.ok) {
-            this.updateSyncBadge('connected', `Saved to Aiven Cloud (${student.id})`);
-            setTimeout(() => this.updateSyncBadge('connected', `Aiven Cloud DB Live (${state.students.length} Students)`), 2500);
-          }
         } catch (e) {
-          console.warn('Failed to save student to cloud:', e.message);
-          this.updateSyncBadge('offline', 'Offline (Saved Locally)');
+          console.warn('Failed to save student to database:', e.message);
         }
       },
 
       async deleteStudent(studentId) {
         if (!studentId) return;
         try {
-          this.updateSyncBadge('syncing', 'Deleting from Aiven Cloud DB...');
           await fetch(`${this.getBaseUrl()}/api/students?id=${encodeURIComponent(studentId)}`, {
             method: 'DELETE'
           });
-          this.updateSyncBadge('connected', `Aiven Cloud DB Live (${state.students.length} Students)`);
         } catch (e) {
-          console.warn('Failed to delete student from cloud:', e.message);
+          console.warn('Failed to delete student from database:', e.message);
         }
       },
 
       async recordFeePayment(studentId, paymentData, student) {
         try {
-          this.updateSyncBadge('syncing', 'Recording payment in Aiven Cloud...');
-          const res = await fetch(`${this.getBaseUrl()}/api/fees`, {
+          await fetch(`${this.getBaseUrl()}/api/fees`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1100,19 +1074,14 @@
               student
             })
           });
-          if (res.ok) {
-            this.updateSyncBadge('connected', 'Payment Saved to Aiven Cloud!');
-            setTimeout(() => this.updateSyncBadge('connected', `Aiven Cloud DB Live (${state.students.length} Students)`), 2500);
-          }
         } catch (e) {
-          console.warn('Failed to save fee payment to cloud:', e.message);
+          console.warn('Failed to save fee payment to database:', e.message);
         }
       },
 
       async saveStudentMarks(studentId, termName, marks, student) {
         try {
-          this.updateSyncBadge('syncing', 'Saving marks in Aiven Cloud...');
-          const res = await fetch(`${this.getBaseUrl()}/api/academic`, {
+          await fetch(`${this.getBaseUrl()}/api/academic`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1122,20 +1091,15 @@
               student
             })
           });
-          if (res.ok) {
-            this.updateSyncBadge('connected', 'Marks Saved to Aiven Cloud!');
-            setTimeout(() => this.updateSyncBadge('connected', `Aiven Cloud DB Live (${state.students.length} Students)`), 2500);
-          }
         } catch (e) {
-          console.warn('Failed to save academic marks to cloud:', e.message);
+          console.warn('Failed to save academic marks to database:', e.message);
         }
       },
 
       async saveAttendanceSingle(studentId, status, targetDate, reason) {
         if (!studentId) return;
         try {
-          this.updateSyncBadge('syncing', `Saving attendance (${studentId})...`);
-          const res = await fetch(`${this.getBaseUrl()}/api/attendance`, {
+          await fetch(`${this.getBaseUrl()}/api/attendance`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1147,19 +1111,14 @@
               }
             })
           });
-          if (res.ok) {
-            this.updateSyncBadge('connected', 'Attendance Saved to Aiven Cloud!');
-            setTimeout(() => this.updateSyncBadge('connected', `Aiven Cloud DB Live (${state.students.length} Students)`), 2500);
-          }
         } catch (e) {
-          console.warn('Failed to save single attendance to cloud:', e.message);
+          console.warn('Failed to save single attendance to database:', e.message);
         }
       },
 
       async saveAttendance(attendanceMap, targetDate, studentUpdates) {
         try {
-          this.updateSyncBadge('syncing', 'Saving attendance in Aiven Cloud...');
-          const res = await fetch(`${this.getBaseUrl()}/api/attendance`, {
+          await fetch(`${this.getBaseUrl()}/api/attendance`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1168,10 +1127,8 @@
               studentUpdates
             })
           });
-          this.updateSyncBadge('connected', 'Attendance Saved to Aiven Cloud!');
-          setTimeout(() => this.updateSyncBadge('connected', `Aiven Cloud DB Live (${state.students.length} Students)`), 2500);
         } catch (e) {
-          console.warn('Failed to save attendance to cloud:', e.message);
+          console.warn('Failed to save attendance to database:', e.message);
         }
       },
 
@@ -1183,7 +1140,7 @@
             body: JSON.stringify({ key, value })
           });
         } catch (e) {
-          console.warn(`Failed to save state key ${key} to cloud:`, e.message);
+          console.warn(`Failed to save state key ${key} to database:`, e.message);
         }
       },
 
@@ -1225,47 +1182,16 @@
             body: JSON.stringify({ updates })
           });
         } catch (e) {
-          console.warn('Debounced state sync failed:', e.message);
+          console.warn('State sync failed:', e.message);
         }
       },
 
       updateSyncBadge(status, text) {
-        // Silent background sync without manual badge UI
+        // Silent background sync
       }
     };
 
-    function saveStateLocalOnly() {
-      localStorage.setItem('stv_view_mode', state.viewMode);
-      if (state.currentUser) localStorage.setItem('stv_auth_user_v12', JSON.stringify(state.currentUser));
-      else localStorage.removeItem('stv_auth_user_v12');
-      localStorage.setItem('stv_users_v12', JSON.stringify(state.users));
-      localStorage.setItem('stv_website_v12', JSON.stringify(state.website));
-      localStorage.setItem('stv_override_logs_v12', JSON.stringify(state.overrideLogs));
-      localStorage.setItem('stv_years_v11', JSON.stringify(state.availableYears));
-      localStorage.setItem('stv_active_year_v11', state.activeAcademicYear);
-      localStorage.setItem('stv_year_statuses_v11', JSON.stringify(state.yearStatuses));
-      localStorage.setItem('stv_academic_history_v11', JSON.stringify(state.academicHistory));
-      localStorage.setItem('stv_students_v11', JSON.stringify(state.students));
-      localStorage.setItem('stv_fee_structure_v1', JSON.stringify(state.classFeeStructure));
-      localStorage.setItem('stv_class_subjects_v105', JSON.stringify(state.classSubjectsMap));
-      localStorage.setItem('stv_exams_v105', JSON.stringify(state.examsList));
-      localStorage.setItem('stv_grade_rules_v1', JSON.stringify(state.gradeRules));
-      localStorage.setItem('stv_exam_statuses_v1', JSON.stringify(state.examStatuses));
-      localStorage.setItem('stv_marks_audit_v1', JSON.stringify(state.marksAuditLogs));
-      localStorage.setItem('stv_subjects_v10', JSON.stringify(state.subjects));
-      localStorage.setItem('stv_teachers_v15', JSON.stringify(state.teachers));
-      localStorage.setItem('stv_timetable_v10', JSON.stringify(state.timetable));
-      localStorage.setItem('stv_attendance_v10', JSON.stringify(state.attendanceMap));
-      localStorage.setItem('stv_attendance_date', state.selectedAttendanceDate || getTodayIsoDate());
-      localStorage.setItem('stv_attendance_subtab', state.attendanceSubTab || 'register');
-      localStorage.setItem('stv_attendance_student_id', state.selectedAttendanceStudentId || '');
-      localStorage.setItem('stv_attendance_cal_month', JSON.stringify(state.selectedCalendarMonth !== undefined ? state.selectedCalendarMonth : 7));
-      localStorage.setItem('stv_notes_v10', JSON.stringify(state.notes));
-      localStorage.setItem('stv_tasks_v10', JSON.stringify(state.tasks));
-    }
-
-    async function forceSyncFromCloud(silent = false) {
-      if (!silent && typeof showToast === 'function') showToast('🔄 Refreshing live data from Aiven PostgreSQL Cloud Database...');
+    async function forceSyncFromCloud(silent = true) {
       await CloudSync.loadInitialData(silent);
     }
   
@@ -9055,8 +8981,7 @@
       state.activeModal = null;
       saveStateLocalOnly();
       render();
-
-      // Refresh latest live data from Aiven PostgreSQL Cloud Database on successful login
+      // Refresh latest data on successful login
       CloudSync.loadInitialData(false);
     }
 
@@ -9274,11 +9199,10 @@
       saveStateLocalOnly();
       render();
 
-      // Immediate and reliable write to Aiven PostgreSQL Cloud Database
       await CloudSync.saveStateKey('users', state.users);
       await CloudSync.syncAppStateImmediate();
 
-      alert(`✅ Staff User Account "${fullName}" (${username}) has been permanently saved into the Aiven Cloud Database!`);
+      showToast('Changes saved successfully.');
     }
 
     // PUBLIC WEBSITE & CMS FUNCTIONS
@@ -9950,7 +9874,7 @@
         }
       });
 
-      // Debounced live auto-save of student marks to Aiven Cloud Database
+      // Auto-save marks changes
       CloudSync.saveStudentDebounced(student);
 
       const pct = maxTotal > 0 ? ((obtainedSum / maxTotal) * 100).toFixed(1) : '0.0';
@@ -10089,12 +10013,10 @@
         return;
       }
 
-      // 🚀 UPLOAD ALL UPDATED STUDENTS TO AIVEN POSTGRESQL CLOUD DATABASE
       const studentsToSync = state.students.filter(s => isSameClass(s.grade, grade) && (section === 'all' || isSameSection(s.section, section)));
       CloudSync.saveBulkStudents(studentsToSync);
       saveState();
-      showToast(`🟢 Successfully saved & uploaded ${examCode} marks for ${updatedCount} students to Aiven Cloud Database!`);
-      alert(`✅ Marks Saved & Synced to Aiven Cloud!\n\nSuccessfully saved and uploaded ${examCode} examination marks for ${updatedCount} students to Aiven PostgreSQL Database.\nAll other systems and logins (Principal, Correspondent, Teachers) will now see this updated data immediately!`);
+      showToast('Changes saved successfully.');
     }
 
     function updateStudentTeacherRemarks(studentId, examCode, remarksText) {
@@ -10504,7 +10426,7 @@
       }
       saveState();
       closeModal();
-      alert(`✅ Marks for ${state.modalStudent.name} (${term}) saved successfully!`);
+      showToast('Changes saved successfully.');
     }
 
     function saveEditStudent(e) {
@@ -10662,6 +10584,7 @@
       CloudSync.saveStudent(updatedRecord);
 
       closeModal();
+      showToast('Data saved successfully.');
     }
 
     function setPaymentPreset(amt) {
@@ -10950,7 +10873,6 @@
       if (dStr === getTodayIsoDate()) {
         state.attendanceMap[id] = st;
       }
-      // Save directly to Aiven PostgreSQL Cloud DB
       CloudSync.saveAttendanceSingle(id, st, dStr, student?.attendanceHistory?.[dStr]?.reason);
       if (student) {
         CloudSync.saveStudent(student);
@@ -10983,7 +10905,7 @@
       const dStr = getSelectedAttendanceDate();
       CloudSync.saveAttendance(state.attendanceMap, dStr);
       saveState();
-      showToast(`✅ All attendance changes for ${formatIsoDateNice(dStr)} saved successfully to Database & Cloud!`);
+      showToast('Changes saved successfully.');
     }
 
     function addTask(e) {
@@ -11191,7 +11113,7 @@
     }
     render();
 
-    // INITIALIZE AIVEN POSTGRESQL CLOUD DATABASE SYNC ON STARTUP
+    // INITIALIZE BACKGROUND DATABASE SYNC ON STARTUP
     window.addEventListener('DOMContentLoaded', () => {
       CloudSync.loadInitialData();
       // Auto background sync polling every 25 seconds
