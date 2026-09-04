@@ -203,7 +203,8 @@ async function runTests() {
       await client.connect();
       await client.query("DELETE FROM students WHERE student_id = $1", [dummyStudentId]);
       await client.query("DELETE FROM fee_payments WHERE student_id = $1 OR receipt_no LIKE 'STV/2026/TEST-%'", [dummyStudentId]);
-      await client.query("UPDATE app_state SET value = $1, updated_at = CURRENT_TIMESTAMP WHERE key = 'teachers'", [JSON.stringify(originalTeachers)]);
+      await client.query("UPDATE app_state SET value = $1, updated_at = CURRENT_TIMESTAMP WHERE key = 'attendanceMap'", [JSON.stringify({})]);
+      await client.query("UPDATE app_state SET value = $1, updated_at = CURRENT_TIMESTAMP WHERE key = 'teachers'", [JSON.stringify(originalTeachers && originalTeachers.length > 0 ? originalTeachers : [])]);
       await client.end();
       console.log('✅ [CLEANUP COMPLETE] 0 test artifacts left in production database.\n');
     } catch (cleanErr) {

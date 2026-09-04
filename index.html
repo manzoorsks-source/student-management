@@ -804,6 +804,9 @@
           localStorage.removeItem(k);
         }
       });
+      ['stv_teachers_v11', 'stv_teachers_v12', 'stv_teachers_v13', 'stv_teachers_v14', 'stv_teachers_v15', 'stv_attendance_v10'].forEach(k => {
+        localStorage.removeItem(k);
+      });
     } catch(e) {}
 
     function loadUsersState() {
@@ -922,9 +925,9 @@
       selectedStatusFilter: 'all',
       students: safeLoadJson('stv_students_v11', GENERATE_RAW_STUDENTS()),
       subjects: safeLoadJson('stv_subjects_v10', DEFAULT_SUBJECTS),
-      teachers: (() => { const t = safeLoadJson('stv_teachers_v15', null); return (Array.isArray(t) && t.length > 0) ? t : INITIAL_TEACHERS; })(),
+      teachers: (() => { const t = safeLoadJson('stv_teachers_v20', null); return (Array.isArray(t) && t.length > 0) ? t : INITIAL_TEACHERS; })(),
       timetable: safeLoadJson('stv_timetable_v10', WEEKLY_TIMETABLE),
-      attendanceMap: safeLoadJson('stv_attendance_v10', {}),
+      attendanceMap: safeLoadJson('stv_attendance_v20', {}),
       notes: safeLoadJson('stv_notes_v10', [
         { id: 1, text: 'Submit 1st Assessment Marks Registers by Friday.', date: '02-Aug-2026' },
         { id: 2, text: 'Parents-Teacher Meeting (PTM) scheduled for 15th August.', date: '02-Aug-2026' }
@@ -1296,9 +1299,9 @@
       localStorage.setItem('stv_exam_statuses_v1', JSON.stringify(state.examStatuses));
       localStorage.setItem('stv_marks_audit_v1', JSON.stringify(state.marksAuditLogs));
       localStorage.setItem('stv_subjects_v10', JSON.stringify(state.subjects));
-      localStorage.setItem('stv_teachers_v15', JSON.stringify(state.teachers));
+      localStorage.setItem('stv_teachers_v20', JSON.stringify(state.teachers));
       localStorage.setItem('stv_timetable_v10', JSON.stringify(state.timetable));
-      localStorage.setItem('stv_attendance_v10', JSON.stringify(state.attendanceMap));
+      localStorage.setItem('stv_attendance_v20', JSON.stringify(state.attendanceMap));
       localStorage.setItem('stv_attendance_date', state.selectedAttendanceDate || getTodayIsoDate());
       localStorage.setItem('stv_attendance_subtab', state.attendanceSubTab || 'register');
       localStorage.setItem('stv_attendance_student_id', state.selectedAttendanceStudentId || '');
