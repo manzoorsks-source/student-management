@@ -1212,18 +1212,7 @@
       },
 
       updateSyncBadge(status, text) {
-        const badgeEl = document.getElementById('cloud-sync-badge');
-        if (!badgeEl) return;
-        if (status === 'connected') {
-          badgeEl.className = 'bg-emerald-50 border border-emerald-300 text-emerald-800 px-3 py-1 rounded-xl text-xs flex items-center space-x-1.5 font-bold shadow-xs';
-          badgeEl.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span><span id="cloud-sync-text">${text}</span><button onclick="forceSyncFromCloud()" title="Sync with Aiven Cloud Database" class="ml-1 text-emerald-700 hover:text-emerald-950 underline text-[11px]">🔄 Sync</button>`;
-        } else if (status === 'syncing') {
-          badgeEl.className = 'bg-amber-50 border border-amber-300 text-amber-800 px-3 py-1 rounded-xl text-xs flex items-center space-x-1.5 font-bold shadow-xs';
-          badgeEl.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-amber-500 animate-spin"></span><span id="cloud-sync-text">${text}</span>`;
-        } else if (status === 'offline') {
-          badgeEl.className = 'bg-rose-50 border border-rose-300 text-rose-800 px-3 py-1 rounded-xl text-xs flex items-center space-x-1.5 font-bold shadow-xs';
-          badgeEl.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-rose-500"></span><span id="cloud-sync-text">${text}</span><button onclick="forceSyncFromCloud()" title="Retry Connecting" class="ml-1 text-rose-700 hover:text-rose-950 underline text-[11px]">🔄 Retry</button>`;
-        }
+        // Silent background sync without manual badge UI
       }
     };
 
@@ -3540,14 +3529,6 @@
                     <span class="font-bold text-slate-700">👤 ${state.currentUser.username}</span>
                     <button onclick="handleLogout()" class="text-rose-600 font-bold ml-1 hover:underline">Logout</button>
                   </div>
-
-                  
-                  <!-- AIVEN POSTGRESQL LIVE CLOUD SYNC BADGE -->
-                  <div id="cloud-sync-badge" class="bg-emerald-50 border border-emerald-300 text-emerald-800 px-3 py-1 rounded-xl text-xs flex items-center space-x-1.5 font-bold shadow-xs">
-                    <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span id="cloud-sync-text">Aiven Cloud DB Live</span>
-                    <button onclick="forceSyncFromCloud()" title="Sync with Aiven Cloud Database" class="ml-1 text-emerald-700 hover:text-emerald-950 underline text-[11px]">🔄 Sync</button>
-                  </div>
     
                   <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold shadow-md active:scale-95">
                     📊 Export
@@ -4522,10 +4503,7 @@
                               ${isLocked ? '🔓 Unlock Exam for Editing' : '🔒 Lock & Publish Results'}
                             </button>
                           ` : ''}
-                          <button onclick="forceSyncFromCloud(false)" title="Pull latest marks from Aiven Cloud" class="bg-sky-700 hover:bg-sky-800 text-white px-3.5 py-2.5 rounded-xl text-xs font-black shadow-md flex items-center space-x-1">
-                            <span>🔄 Pull from Cloud DB</span>
-                          </button>
-                          <button onclick="saveClassExamMarks('${currentClass}', '${currentSec}', '${currentExam}')" ${!canEdit ? 'disabled' : ''} class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-5 py-1.5 rounded-xl text-xs font-black shadow-md active:scale-95 transition-all">
+                          <button onclick="saveClassExamMarks('${currentClass}', '${currentSec}', '${currentExam}')" ${!canEdit ? 'disabled' : ''} class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-xl text-xs font-black shadow-md active:scale-95 transition-all">
                             💾 Save All Class Marks
                           </button>
                         </div>
