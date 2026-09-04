@@ -801,6 +801,11 @@
       if (!Array.isArray(loaded) || loaded.length === 0) {
         loaded = INITIAL_USERS;
       }
+      // Strictly purge legacy mock user 'correspondent' / 'Mr. M. A. Manzoor'
+      loaded = loaded.filter(u => u && u.username !== 'correspondent' && u.fullName !== 'Mr. M. A. Manzoor');
+      if (loaded.length === 0 || !loaded.some(u => u.username === 'shaikmadar786')) {
+        loaded = [INITIAL_USERS[0], ...loaded.filter(u => u.username !== 'shaikmadar786')];
+      }
       return loaded.map(u => {
         let plain = u.password || (u.username === 'shaikmadar786' ? 'Shaik@786' : 'admin123');
         return {
@@ -1023,6 +1028,12 @@
             if (stateJson.success && stateJson.data) {
               const d = stateJson.data;
               if (d.users && Array.isArray(d.users) && d.users.length > 0) {
+                // Permanently filter out and purge legacy user 'correspondent' / 'Mr. M. A. Manzoor'
+                const hadLegacyUser = d.users.some(u => u && (u.username === 'correspondent' || u.fullName === 'Mr. M. A. Manzoor' || (u.fullName && u.fullName.includes('Manzoor') && u.role === 'super_admin')));
+                if (hadLegacyUser) {
+                  d.users = d.users.filter(u => u && u.username !== 'correspondent' && u.fullName !== 'Mr. M. A. Manzoor' && !(u.fullName && u.fullName.includes('Manzoor') && u.role === 'super_admin'));
+                }
+
                 // Ensure primary administrator account (shaikmadar786) is guaranteed in users list
                 const hasAdmin = d.users.some(u => (u.username || '').toLowerCase() === 'shaikmadar786');
                 if (!hasAdmin) {
@@ -1041,12 +1052,17 @@
                     lastLogin: 'Never'
                   };
                   d.users.unshift(adminSeed);
+                }
+
+                if (hadLegacyUser || !hasAdmin) {
+                  // Persist cleaned list immediately to Aiven PostgreSQL
                   fetch(`${this.getBaseUrl()}/api/state`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ key: 'users', value: d.users })
                   }).catch(() => {});
                 }
+
                 // If user is currently editing a user account in the modal, protect in-memory draft from being overwritten
                 if (!state.activeModal || (state.activeModal !== 'editUser' && state.activeModal !== 'addUser')) {
                   state.users = d.users;
