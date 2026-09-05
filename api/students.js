@@ -1,4 +1,5 @@
 const { Client } = require('pg');
+const { requireAuth } = require('./authMiddleware');
 
 function getClient() {
   const connectionString = (process.env.DATABASE_URL || process.env.AIVEN_DATABASE_URL || '').split('?')[0];
@@ -71,7 +72,9 @@ function parseStudentFromRow(row) {
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST,PUT,DELETE');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Auth-Token');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -80,6 +83,10 @@ module.exports = async (req, res) => {
   const client = getClient();
   try {
     await client.connect();
+
+    // Enforce Backend Authentication Guard
+    const authUser = await requireAuth(req, res, client);
+    if (!authUser) return;
 
     // GET /api/students (or GET by query params)
     if (req.method === 'GET') {

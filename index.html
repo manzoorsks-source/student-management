@@ -488,6 +488,80 @@
       return null;
     }
 
+    function isHighSchoolWithRWPS(grade) {
+      if (!grade) return false;
+      const baseGrade = grade.toString().split('-')[0].trim();
+      const norm = normalizeClassCode(baseGrade);
+      return norm === '8' || norm === '9' || norm === '10';
+    }
+
+    function getStudentSubjectRWPS(student, exKey, subjectName) {
+      const tData = findExamData(student, exKey);
+      if (!tData) return null;
+
+      // 1. Direct _rwps object lookup
+      if (tData._rwps && typeof tData._rwps === 'object') {
+        if (tData._rwps[subjectName]) return tData._rwps[subjectName];
+        const targetClean = subjectName.toLowerCase().replace(/[\s\-_().]/g, '');
+        for (const k in tData._rwps) {
+          if (k.toLowerCase().replace(/[\s\-_().]/g, '') === targetClean) {
+            return tData._rwps[k];
+          }
+        }
+      }
+
+      // 2. Direct subject__rwps key lookup
+      if (tData[subjectName + '__rwps'] && typeof tData[subjectName + '__rwps'] === 'object') {
+        return tData[subjectName + '__rwps'];
+      }
+
+      // 3. Subkeys _r, _w, _p, _s lookup
+      const cleanKey = subjectName.replace(/\s+/g, '_');
+      if (tData[cleanKey + '_r'] !== undefined || tData[cleanKey + '_w'] !== undefined || tData[cleanKey + '_p'] !== undefined || tData[cleanKey + '_s'] !== undefined) {
+        return {
+          r: tData[cleanKey + '_r'],
+          w: tData[cleanKey + '_w'],
+          p: tData[cleanKey + '_p'],
+          s: tData[cleanKey + '_s']
+        };
+      }
+
+      return null;
+    }
+
+    function updateModalRWPSLive(cleanKey, maxMarksNum) {
+      const rInp = document.getElementById('sub_r_' + cleanKey);
+      const wInp = document.getElementById('sub_w_' + cleanKey);
+      const pInp = document.getElementById('sub_p_' + cleanKey);
+      const sInp = document.getElementById('sub_s_' + cleanKey);
+      const totalInp = document.getElementById('sub_mark_' + cleanKey);
+
+      if (!totalInp) return;
+
+      const rVal = rInp ? rInp.value.trim() : '';
+      const wVal = wInp ? wInp.value.trim() : '';
+      const pVal = pInp ? pInp.value.trim() : '';
+      const sVal = sInp ? sInp.value.trim() : '';
+
+      const hasAny = rVal !== '' || wVal !== '' || pVal !== '' || sVal !== '';
+      if (hasAny) {
+        const r = parseFloat(rVal) || 0;
+        const w = parseFloat(wVal) || 0;
+        const p = parseFloat(pVal) || 0;
+        const s = parseFloat(sVal) || 0;
+        let sum = Math.round((r + w + p + s) * 10) / 10;
+        const maxLimit = parseFloat(maxMarksNum) || 20;
+
+        if (sum > maxLimit) {
+          sum = maxLimit;
+          if (typeof showToast === 'function') {
+            showToast('⚠️ RWPS sum cannot exceed Max Limit (' + maxLimit + ')! Capped to ' + maxLimit);
+          }
+        }
+        totalInp.value = sum.toString();
+      }
+    }
+
     function getStudentSubjectEntry(student, exKey, subItem) {
       const tData = findExamData(student, exKey);
       if (!tData) return { entered: false, mark: null, text: '--' };
@@ -905,10 +979,13 @@
       }
     }
 
-    // STATE STORE
+    // STATE STORE - SECURE AUTHENTICATION STATE
+    const _savedToken = localStorage.getItem('stv_auth_token') || sessionStorage.getItem('stv_auth_token') || null;
     let state = {
-      viewMode: localStorage.getItem('stv_view_mode') || 'public',
-      currentUser: safeLoadJson('stv_auth_user_v12', null),
+      token: _savedToken,
+      isVerifyingAuth: false,
+      viewMode: _savedToken ? (localStorage.getItem('stv_view_mode') || 'portal') : 'login',
+      currentUser: _savedToken ? safeLoadJson('stv_auth_user_v12', null) : null,
       users: loadUsersState(),
       website: safeLoadJson('stv_website_v12', INITIAL_WEBSITE_DATA),
       overrideLogs: safeLoadJson('stv_override_logs_v12', []),
@@ -923,7 +1000,7 @@
       yearStatuses: safeLoadJson('stv_year_statuses_v11', { '2026–2027': 'Active', '2027–2028': 'Upcoming', '2028–2029': 'Upcoming' }),
       academicHistory: safeLoadJson('stv_academic_history_v11', {}),
       selectedStatusFilter: 'all',
-      students: safeLoadJson('stv_students_v11', GENERATE_RAW_STUDENTS()),
+      students: _savedToken ? safeLoadJson('stv_students_v11', []) : [],
       subjects: safeLoadJson('stv_subjects_v10', DEFAULT_SUBJECTS),
       teachers: (() => { const t = safeLoadJson('stv_teachers_v20', null); return (Array.isArray(t) && t.length > 0) ? t : INITIAL_TEACHERS; })(),
       timetable: safeLoadJson('stv_timetable_v10', WEEKLY_TIMETABLE),
@@ -977,6 +1054,30 @@
       _studentDebounceTimers: {},
       dirtyStudentIds: new Set(),
 
+      async authFetch(url, options = {}) {
+        const token = state.token || localStorage.getItem('stv_auth_token') || sessionStorage.getItem('stv_auth_token') || '';
+        const headers = {
+          'Content-Type': 'application/json',
+          ...(options.headers || {})
+        };
+        if (token) {
+          headers['Authorization'] = 'Bearer ' + token;
+        }
+        try {
+          const res = await fetch(url, { ...options, headers });
+          if (res.status === 401) {
+            console.warn('Session unauthorized or expired (401). Redirecting to login.');
+            if (typeof handleLogout === 'function' && state.currentUser) {
+              handleLogout(false);
+            }
+          }
+          return res;
+        } catch (err) {
+          console.warn('Request failed for ' + url + ':', err.message);
+          throw err;
+        }
+      },
+
       saveStudentDebounced(student) {
         if (!student || !student.id) return;
         this.dirtyStudentIds.add(student.id);
@@ -992,7 +1093,7 @@
       async saveBulkStudents(studentsList) {
         if (!Array.isArray(studentsList) || studentsList.length === 0) return;
         try {
-          const res = await fetch(`${this.getBaseUrl()}/api/students`, {
+          const res = await this.authFetch(`${this.getBaseUrl()}/api/students`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ students: studentsList })
@@ -1034,7 +1135,7 @@
       async loadInitialData(silent = false) {
         try {
           // 1. Fetch Students from central database
-          const studentsRes = await fetch(`${this.getBaseUrl()}/api/students`);
+          const studentsRes = await this.authFetch(`${this.getBaseUrl()}/api/students`);
           if (studentsRes.ok) {
             const studentsJson = await studentsRes.json();
             if (studentsJson.success && Array.isArray(studentsJson.data) && studentsJson.data.length > 0) {
@@ -1043,7 +1144,7 @@
           }
 
           // 2. Fetch App State from central database
-          const stateRes = await fetch(`${this.getBaseUrl()}/api/state`);
+          const stateRes = await this.authFetch(`${this.getBaseUrl()}/api/state`);
           if (stateRes.ok) {
             const stateJson = await stateRes.json();
             if (stateJson.success && stateJson.data) {
@@ -1126,7 +1227,7 @@
       async saveStudent(student) {
         if (!student || !student.id) return;
         try {
-          await fetch(`${this.getBaseUrl()}/api/students`, {
+          await this.authFetch(`${this.getBaseUrl()}/api/students`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ student })
@@ -1139,7 +1240,7 @@
       async deleteStudent(studentId) {
         if (!studentId) return;
         try {
-          await fetch(`${this.getBaseUrl()}/api/students?id=${encodeURIComponent(studentId)}`, {
+          await this.authFetch(`${this.getBaseUrl()}/api/students?id=${encodeURIComponent(studentId)}`, {
             method: 'DELETE'
           });
         } catch (e) {
@@ -1149,7 +1250,7 @@
 
       async recordFeePayment(studentId, paymentData, student) {
         try {
-          await fetch(`${this.getBaseUrl()}/api/fees`, {
+          await this.authFetch(`${this.getBaseUrl()}/api/fees`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1165,7 +1266,7 @@
 
       async saveStudentMarks(studentId, termName, marks, student) {
         try {
-          await fetch(`${this.getBaseUrl()}/api/academic`, {
+          await this.authFetch(`${this.getBaseUrl()}/api/academic`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1183,7 +1284,7 @@
       async saveAttendanceSingle(studentId, status, targetDate, reason) {
         if (!studentId) return;
         try {
-          await fetch(`${this.getBaseUrl()}/api/attendance`, {
+          await this.authFetch(`${this.getBaseUrl()}/api/attendance`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1202,7 +1303,7 @@
 
       async saveAttendance(attendanceMap, targetDate, studentUpdates) {
         try {
-          await fetch(`${this.getBaseUrl()}/api/attendance`, {
+          await this.authFetch(`${this.getBaseUrl()}/api/attendance`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1218,7 +1319,7 @@
 
       async saveStateKey(key, value) {
         try {
-          await fetch(`${this.getBaseUrl()}/api/state`, {
+          await this.authFetch(`${this.getBaseUrl()}/api/state`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ key, value })
@@ -1260,7 +1361,7 @@
             attendanceMap: state.attendanceMap
           };
 
-          await fetch(`${this.getBaseUrl()}/api/state`, {
+          await this.authFetch(`${this.getBaseUrl()}/api/state`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ updates })
@@ -1282,6 +1383,8 @@
 
     function saveStateLocalOnly() {
       localStorage.setItem('stv_view_mode', state.viewMode);
+      if (state.token) localStorage.setItem('stv_auth_token', state.token);
+      else localStorage.removeItem('stv_auth_token');
       if (state.currentUser) localStorage.setItem('stv_auth_user_v12', JSON.stringify(state.currentUser));
       else localStorage.removeItem('stv_auth_user_v12');
       localStorage.setItem('stv_users_v20', JSON.stringify(state.users));
@@ -2708,13 +2811,126 @@
       });
     }
 
+    // --- DEDICATED LOGIN SCREEN RENDERER ---
+    function renderLoginScreen() {
+      const app = document.getElementById('app');
+      if (!app) return;
+
+      app.innerHTML = `
+        <div class="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white font-sans flex flex-col justify-between antialiased selection:bg-sky-500 selection:text-white relative overflow-hidden">
+          <!-- Ambient Glow Lights -->
+          <div class="absolute -top-40 -left-40 w-96 h-96 bg-sky-500/20 rounded-full blur-3xl pointer-events-none"></div>
+          <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+          <!-- TOP BAR -->
+          <header class="p-6 max-w-7xl mx-auto w-full flex justify-between items-center z-10">
+            <div class="flex items-center space-x-3">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-sky-700 flex items-center justify-center shadow-xl border-2 border-amber-400">
+                <span class="text-xl font-black text-white font-display">ST.V</span>
+              </div>
+              <div>
+                <h1 class="text-lg sm:text-xl font-black tracking-tight text-white font-display uppercase">ST. VENUS HIGH SCHOOL</h1>
+                <p class="text-[10px] text-sky-300 font-bold uppercase tracking-wider">(Recognised by Govt. of Telangana)</p>
+              </div>
+            </div>
+
+            <button onclick="switchViewMode('public')" class="bg-white/10 hover:bg-white/20 text-sky-200 border border-white/20 px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 backdrop-blur-md">
+              <span>🌐 Public School Site</span>
+            </button>
+          </header>
+
+          <!-- MAIN LOGIN CONTAINER -->
+          <main class="flex-1 flex items-center justify-center p-4 sm:p-6 z-10">
+            <div class="bg-white/95 text-slate-900 border border-white/40 shadow-2xl rounded-3xl p-6 sm:p-10 max-w-md w-full backdrop-blur-xl space-y-6 animate-in fade-in zoom-in duration-300">
+              <div class="text-center space-y-2">
+                <div class="inline-flex items-center space-x-2 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full text-[11px] font-bold text-indigo-700 uppercase tracking-wide">
+                  <span>🔒 Official Staff Authentication</span>
+                </div>
+                <h2 class="text-2xl font-black text-slate-900 font-display">Staff Portal Sign In</h2>
+                <p class="text-xs text-slate-500 font-medium">Please enter your authorized school credentials to access the Dashboard & Administration System.</p>
+              </div>
+
+              ${state.loginError ? `
+                <div class="bg-rose-50 border border-rose-300 text-rose-700 text-xs p-3.5 rounded-2xl font-bold flex items-start space-x-2.5 animate-shake">
+                  <span class="text-base leading-none">⚠️</span>
+                  <span class="leading-relaxed">${state.loginError}</span>
+                </div>
+              ` : ''}
+
+              <form onsubmit="handleLogin(event)" class="space-y-4 text-xs font-medium">
+                <div>
+                  <label class="block text-slate-700 font-bold mb-1.5">Username <span class="text-rose-600">*</span></label>
+                  <div class="relative">
+                    <input id="loginUsername" required placeholder="e.g. shaikmadar786" autocomplete="username" autofocus class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-3 text-slate-900 font-bold text-xs focus:ring-2 focus:ring-sky-500 focus:bg-white focus:outline-none transition-all placeholder:text-slate-400" />
+                  </div>
+                </div>
+
+                <div>
+                  <div class="flex justify-between items-center mb-1.5">
+                    <label class="block text-slate-700 font-bold">Password <span class="text-rose-600">*</span></label>
+                    <button type="button" onclick="const p = document.getElementById('loginPassword'); if(p.type==='password'){p.type='text'; this.innerText='🙈 Hide';}else{p.type='password'; this.innerText='👁️ Show';}" class="text-[11px] text-indigo-600 font-bold hover:underline cursor-pointer">
+                      👁️ Show
+                    </button>
+                  </div>
+                  <div class="relative">
+                    <input type="password" id="loginPassword" required placeholder="Enter your password" autocomplete="current-password" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-3 text-slate-900 font-bold text-xs focus:ring-2 focus:ring-sky-500 focus:bg-white focus:outline-none transition-all placeholder:text-slate-400" />
+                  </div>
+                </div>
+
+                <button type="submit" id="loginSubmitBtn" class="w-full bg-gradient-to-r from-sky-600 via-indigo-600 to-sky-700 hover:from-sky-700 hover:to-indigo-800 text-white font-black py-3.5 rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-indigo-500/30 active:scale-98 transition-all cursor-pointer flex items-center justify-center space-x-2">
+                  <span>Sign In to School Portal &rarr;</span>
+                </button>
+              </form>
+
+              <div class="pt-2 border-t border-slate-200/80 text-center">
+                <p class="text-[11px] text-slate-500 font-medium flex items-center justify-center space-x-1">
+                  <span>🔒 256-bit Central PostgreSQL Server Verification</span>
+                </p>
+                <p class="text-[10px] text-slate-400 mt-1">St. Venus High School • Uppal, Hyderabad</p>
+              </div>
+            </div>
+          </main>
+
+          <!-- FOOTER -->
+          <footer class="p-4 text-center text-slate-400 text-xs z-10">
+            <p>© 2026 ST. VENUS HIGH SCHOOL. All Rights Reserved. Recognized by Govt. of Telangana.</p>
+          </footer>
+        </div>
+      `;
+    }
+
     // --- MAIN RENDERER ENGINE ---
     function render() {
       const app = document.getElementById('app');
       if (!app) return;
 
+      // 0. AUTHENTICATION & SESSION VERIFICATION GUARD
+      const hasValidAuth = !!(state.token && state.currentUser && ROLES_CONFIG[state.currentUser.role]);
+
+      if (state.isVerifyingAuth) {
+        app.innerHTML = `
+          <div class="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 text-white font-sans">
+            <div class="w-16 h-16 rounded-3xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-purple-600 flex items-center justify-center shadow-2xl border-2 border-amber-400 animate-pulse mb-4">
+              <span class="text-2xl font-black font-display">ST.V</span>
+            </div>
+            <h2 class="text-lg font-bold text-slate-200 font-display">ST. VENUS HIGH SCHOOL</h2>
+            <p class="text-xs text-sky-400 mt-2 flex items-center space-x-1.5 font-medium">
+              <span>🔒 Verifying secure authenticated session...</span>
+            </p>
+          </div>
+        `;
+        return;
+      }
+
+      // If unauthenticated and not viewing public info, strictly show Login Screen
+      if (!hasValidAuth && state.viewMode !== 'public') {
+        state.viewMode = 'login';
+        renderLoginScreen();
+        return;
+      }
+
       // 1. PUBLIC SCHOOL WEBSITE VIEW (HERO LANDING PAGE)
-      if (state.viewMode === 'public' || !state.currentUser || !ROLES_CONFIG[state.currentUser.role]) {
+      if (state.viewMode === 'public') {
         state.viewMode = 'public';
         app.innerHTML = `
           <div class="min-h-screen bg-sky-50 text-slate-800 antialiased font-sans flex flex-col">
@@ -2742,12 +2958,12 @@
                   </nav>
 
                   <div class="flex items-center space-x-3">
-                    ${state.currentUser ? `
+                    ${(state.token && state.currentUser) ? `
                       <button onclick="switchViewMode('portal')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md flex items-center space-x-1.5">
                         <span>💼 Staff Portal &rarr;</span>
                       </button>
                     ` : `
-                      <button onclick="openModal('loginModal')" class="bg-sky-700 hover:bg-sky-800 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md flex items-center space-x-1.5 active:scale-95 transition-all">
+                      <button onclick="switchViewMode('login')" class="bg-sky-700 hover:bg-sky-800 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md flex items-center space-x-1.5 active:scale-95 transition-all">
                         <span>🔑 Staff Sign In</span>
                       </button>
                     `}
@@ -3480,7 +3696,8 @@
             <td class="py-3 px-4 text-center whitespace-nowrap">
               <div class="inline-flex items-center justify-center space-x-1.5">
                 <button onclick="openFullProfile('${s.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1.5 rounded-xl font-bold shadow-2xs text-xs whitespace-nowrap">Profile &rarr;</button>
-   <button onclick="openStudentProgressReportModal('${s.id}')" class="bg-rose-700 hover:bg-rose-800 text-white px-2.5 py-1.5 rounded-xl font-bold shadow-2xs text-xs whitespace-nowrap">📜 Progress Card</button>
+                <button onclick="openEditMarksModal('${s.id}', 'FA1')" class="bg-amber-600 hover:bg-amber-700 text-white px-2.5 py-1.5 rounded-xl font-black shadow-2xs text-xs whitespace-nowrap" title="Enter or Edit Assessment Marks & RWPS Components">✏️ ${isHighSchoolWithRWPS(s.grade) ? 'RWPS' : 'Marks'}</button>
+                <button onclick="openStudentProgressReportModal('${s.id}')" class="bg-rose-700 hover:bg-rose-800 text-white px-2.5 py-1.5 rounded-xl font-bold shadow-2xs text-xs whitespace-nowrap">📜 Progress Card</button>
                 <button onclick="openCertificateModal('${s.id}', 'TC')" class="bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-300 px-2.5 py-1.5 rounded-xl font-bold text-xs whitespace-nowrap">📜 TC & Certs</button>
                 <button onclick="openEditStudentModal('${s.id}')" class="bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 px-2.5 py-1.5 rounded-xl font-bold text-xs whitespace-nowrap">✏️ Edit</button>
               </div>
@@ -4668,6 +4885,9 @@
                                     />
                                   </td>
                                   <td class="py-2.5 px-3 text-right space-x-1.5 shrink-0">
+                                    <button onclick="openEditMarksModal('${s.id}', '${currentExam}')" class="bg-amber-600 hover:bg-amber-700 text-white font-black px-2.5 py-1 rounded-lg shadow-2xs text-[11px]" title="Edit assessment marks and RWPS components">
+                                      ✏️ ${isHighSchoolWithRWPS(s.grade) ? 'RWPS' : 'Marks'}
+                                    </button>
                                     <button onclick="openStudentProgressReportModal('${s.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-2.5 py-1 rounded-lg shadow-2xs text-[11px]">
                                       📜 Report
                                     </button>
@@ -5382,55 +5602,153 @@
         `;
       }
 
-      // MODAL 3: EDIT MARKS
+      // MODAL 3: EDIT MARKS & MANUAL RWPS ENTRY CONSOLE
       if (state.activeModal === 'editMarks' && state.modalStudent) {
         const currentTerm = state.modalSelectedTerm || 'FA1';
         const currentMarks = state.modalStudent.termMarks?.[currentTerm] || {};
         const subjectsDetailed = getClassSubjectsDetailed(state.modalStudent.grade, currentTerm);
         const isFA = currentTerm.startsWith('FA');
+        const isHighSchool = isHighSchoolWithRWPS(state.modalStudent.grade) && isFA;
         const termMax = isFA ? 20 : 100;
 
         return `
-          <div class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-            <div class="bg-white border text-slate-900 rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl relative">
-              <div class="flex justify-between items-center border-b pb-3">
+          <div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+            <div class="bg-white border text-slate-900 rounded-3xl ${isHighSchool ? 'max-w-3xl' : 'max-w-lg'} w-full p-6 space-y-4 shadow-2xl relative max-h-[90vh] flex flex-col">
+              <div class="flex justify-between items-center border-b pb-3 shrink-0">
                 <div>
-                  <h3 class="text-base font-bold text-slate-900">Enter Assessment Marks</h3>
-                  <p class="text-xs text-slate-500 font-semibold">${currentTerm} • Max ${termMax} Marks Per Subject</p>
+                  <h3 class="text-lg font-black text-slate-900 font-display">
+                    ${isHighSchool ? 'Assessment Marks & RWPS Entry Console' : 'Enter Assessment Marks'}
+                  </h3>
+                  <p class="text-xs text-slate-500 font-semibold">
+                    ${currentTerm} • ${isHighSchool ? 'Manual R, W, P, S Entry (8th–10th) with Live Auto-Sum & Validation' : 'Max ' + termMax + ' Marks Per Subject'}
+                  </p>
                 </div>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700 font-bold text-lg">✕</button>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700 font-bold text-lg p-1">✕</button>
               </div>
 
-              <form onsubmit="saveStudentMarks(event)" class="space-y-4 text-xs font-medium">
-                <div class="bg-slate-50 p-3 rounded-xl border flex justify-between items-center">
+              <form onsubmit="saveStudentMarks(event)" class="space-y-4 text-xs font-medium overflow-y-auto pr-1 flex-1">
+                <div class="bg-indigo-50/80 p-3.5 rounded-2xl border border-indigo-200 flex flex-wrap justify-between items-center gap-2">
                   <div>
-                    <p class="font-black text-indigo-900 text-sm">${state.modalStudent.name}</p>
-                    <p class="text-slate-500 font-semibold">${state.modalStudent.grade} - Section ${state.modalStudent.section} (Roll #${state.modalStudent.rollNo})</p>
+                    <p class="font-black text-indigo-950 text-sm">${state.modalStudent.name}</p>
+                    <p class="text-slate-600 font-semibold">${state.modalStudent.grade} - Section ${state.modalStudent.section} (Roll #${state.modalStudent.rollNo} • Admn #${state.modalStudent.admnNo || state.modalStudent.id})</p>
                   </div>
-                  <span class="px-3 py-1 bg-indigo-100 text-indigo-900 font-black rounded-xl text-xs">${currentTerm}</span>
+                  <span class="px-3 py-1 bg-indigo-600 text-white font-black rounded-xl text-xs uppercase shadow-sm">${currentTerm}</span>
                 </div>
 
                 <div>
                   <label class="block text-slate-700 mb-1 font-bold">Select Assessment Term</label>
-                  <select id="examTermInput" onchange="changeModalTerm(this.value)" class="w-full bg-slate-50 border rounded-xl px-3 py-2 font-bold text-indigo-700">
-                    ${DEFAULT_EXAMS.map(e => `<option value="${e.code}" ${currentTerm === e.code ? 'selected' : ''}>${e.code} – ${e.name ? e.name.replace(/^[A-Z0-9]+\s*[–-]\s*/, '') : e.code} (Max ${e.maxMarks})</option>`).join('')}
+                  <select id="examTermInput" onchange="changeModalTerm(this.value)" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold text-indigo-900 cursor-pointer">
+                    ${DEFAULT_EXAMS.map(e => `<option value="${e.code}" ${currentTerm === e.code ? 'selected' : ''}>${e.code} – ${e.name ? e.name.replace(/^[A-Z0-9]+\\s*[–-]\\s*/, '') : e.code} (Max ${e.maxMarks})</option>`).join('')}
                   </select>
                 </div>
 
-                <div class="space-y-2 border-t pt-3">
-                  <p class="font-bold text-slate-800">Marks for ${currentTerm} (Out of ${termMax} Each):</p>
-                  <div class="grid grid-cols-2 gap-3">
-                    ${subjectsDetailed.map(subObj => `
-                      <div>
-                        <label class="block text-slate-700 mb-1 font-bold">${subObj.name} <span class="text-[10px] text-slate-400 font-normal">(Max ${subObj.maxMarks})</span></label>
-                        <input type="text" id="sub_mark_${subObj.name.replace(/\s+/g, '_')}" value="${currentMarks[subObj.name] !== undefined ? currentMarks[subObj.name] : ''}" placeholder="0" class="w-full bg-slate-50 border rounded-xl px-3 py-1.5 font-bold text-slate-900 text-sm" />
-                      </div>
-                    `).join('')}
-                  </div>
-                </div>
+                ${isHighSchool ? `
+                  <!-- HIGH SCHOOL (8TH, 9TH, 10TH) RWPS COMPONENT ENTRY TABLE -->
+                  <div class="space-y-2 border-t pt-3">
+                    <div class="flex justify-between items-center">
+                      <p class="font-black text-slate-800 text-xs uppercase tracking-wide">
+                        📝 Curricular Subjects & RWPS Components (Max 20/10 Each):
+                      </p>
+                      <span class="text-[11px] text-indigo-700 font-bold">💡 R + W + P + S auto-calculates Total Marks</span>
+                    </div>
 
-                  <button type="button" onclick="closeModal()" class="bg-slate-100 px-4 py-2 rounded-xl text-xs font-bold text-slate-700">Cancel</button>
-                  <button type="submit" class="bg-indigo-600 text-white px-5 py-2 rounded-xl text-xs font-bold shadow-md">Save Term Marks</button>
+                    <div class="overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50/50">
+                      <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr class="bg-slate-900 text-white font-bold text-center text-[11px]">
+                            <th class="py-2.5 px-3 text-left bg-indigo-950">Subject Name</th>
+                            <th class="py-2.5 px-2 bg-amber-800 text-white w-20">Read (R)</th>
+                            <th class="py-2.5 px-2 bg-amber-800 text-white w-20">Write (W)</th>
+                            <th class="py-2.5 px-2 bg-amber-800 text-white w-20">Project (P)</th>
+                            <th class="py-2.5 px-2 bg-amber-800 text-white w-20">Slip (S)</th>
+                            <th class="py-2.5 px-3 bg-emerald-900 text-white w-28">Total Marks</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200 font-semibold text-slate-800">
+                          ${subjectsDetailed.map(subObj => {
+                            const cleanKey = subObj.name.replace(/\s+/g, '_');
+                            const subMax = subObj.maxMarks || 20;
+                            const rwps = getStudentSubjectRWPS(state.modalStudent, currentTerm, subObj.name) || {};
+                            const curTotal = currentMarks[subObj.name] !== undefined ? currentMarks[subObj.name] : '';
+
+                            return `
+                              <tr class="hover:bg-white transition-colors">
+                                <td class="py-2 px-3 font-bold text-slate-900">
+                                  ${subObj.name}
+                                  <div class="text-[10px] text-indigo-600 font-normal">Max ${subMax} ${subObj.isOptional ? '(Optional)' : ''}</div>
+                                </td>
+                                <td class="py-2 px-1 text-center">
+                                  <input type="number" step="0.5" min="0" max="${subMax}"
+                                    id="sub_r_${cleanKey}"
+                                    value="${rwps.r !== undefined && rwps.r !== null ? rwps.r : ''}"
+                                    placeholder="-"
+                                    oninput="updateModalRWPSLive('${cleanKey}', '${subMax}')"
+                                    class="w-16 bg-white border border-slate-300 rounded-lg py-1 px-1.5 text-center font-mono font-bold text-slate-900 text-xs focus:ring-2 focus:ring-indigo-500"
+                                  />
+                                </td>
+                                <td class="py-2 px-1 text-center">
+                                  <input type="number" step="0.5" min="0" max="${subMax}"
+                                    id="sub_w_${cleanKey}"
+                                    value="${rwps.w !== undefined && rwps.w !== null ? rwps.w : ''}"
+                                    placeholder="-"
+                                    oninput="updateModalRWPSLive('${cleanKey}', '${subMax}')"
+                                    class="w-16 bg-white border border-slate-300 rounded-lg py-1 px-1.5 text-center font-mono font-bold text-slate-900 text-xs focus:ring-2 focus:ring-indigo-500"
+                                  />
+                                </td>
+                                <td class="py-2 px-1 text-center">
+                                  <input type="number" step="0.5" min="0" max="${subMax}"
+                                    id="sub_p_${cleanKey}"
+                                    value="${rwps.p !== undefined && rwps.p !== null ? rwps.p : ''}"
+                                    placeholder="-"
+                                    oninput="updateModalRWPSLive('${cleanKey}', '${subMax}')"
+                                    class="w-16 bg-white border border-slate-300 rounded-lg py-1 px-1.5 text-center font-mono font-bold text-slate-900 text-xs focus:ring-2 focus:ring-indigo-500"
+                                  />
+                                </td>
+                                <td class="py-2 px-1 text-center">
+                                  <input type="number" step="0.5" min="0" max="${subMax}"
+                                    id="sub_s_${cleanKey}"
+                                    value="${rwps.s !== undefined && rwps.s !== null ? rwps.s : ''}"
+                                    placeholder="-"
+                                    oninput="updateModalRWPSLive('${cleanKey}', '${subMax}')"
+                                    class="w-16 bg-white border border-slate-300 rounded-lg py-1 px-1.5 text-center font-mono font-bold text-slate-900 text-xs focus:ring-2 focus:ring-indigo-500"
+                                  />
+                                </td>
+                                <td class="py-2 px-2 text-center">
+                                  <input type="text"
+                                    id="sub_mark_${cleanKey}"
+                                    value="${curTotal}"
+                                    placeholder="0"
+                                    class="w-20 bg-emerald-50 border border-emerald-300 font-mono font-black text-emerald-950 rounded-lg py-1 px-2 text-center text-xs focus:ring-2 focus:ring-emerald-500"
+                                  />
+                                </td>
+                              </tr>
+                            `;
+                          }).join('')}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ` : `
+                  <!-- STANDARD MARKS ENTRY (NURSERY TO 7TH CLASS OR SA EXAMS) -->
+                  <div class="space-y-2 border-t pt-3">
+                    <p class="font-bold text-slate-800">Marks for ${currentTerm} (Out of ${termMax} Each):</p>
+                    <div class="grid grid-cols-2 gap-3">
+                      ${subjectsDetailed.map(subObj => {
+                        const cleanKey = subObj.name.replace(/\s+/g, '_');
+                        return `
+                          <div>
+                            <label class="block text-slate-700 mb-1 font-bold">${subObj.name} <span class="text-[10px] text-slate-400 font-normal">(Max ${subObj.maxMarks})</span></label>
+                            <input type="text" id="sub_mark_${cleanKey}" value="${currentMarks[subObj.name] !== undefined ? currentMarks[subObj.name] : ''}" placeholder="0" class="w-full bg-slate-50 border rounded-xl px-3 py-1.5 font-bold text-slate-900 text-sm" />
+                          </div>
+                        `;
+                      }).join('')}
+                    </div>
+                  </div>
+                `}
+
+                <div class="pt-3 border-t flex justify-end space-x-2 shrink-0">
+                  <button type="button" onclick="closeModal()" class="bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-700">Cancel</button>
+                  <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl text-xs font-black shadow-md active:scale-95 transition-all">💾 Save Assessment Marks</button>
                 </div>
               </form>
             </div>
@@ -5687,6 +6005,7 @@
           let faObtainedSum = 0;
           let faMaxSum = 0;
           let enteredCount = 0;
+          const isHighSchool = isHighSchoolWithRWPS(s.grade);
 
           const faRows = subjectsForCard.map((item, idx) => {
             const entry = getStudentSubjectEntry(s, faCode, item);
@@ -5700,11 +6019,20 @@
                 enteredCount++;
               }
 
-              // Component breakdown (Read & Reflection, Written Work, Project Work, Slip Test)
-              const slipTest = Math.round(obt * 0.25);
-              const project = Math.round(obt * 0.25);
-              const written = Math.round(obt * 0.25);
-              const readRef = obt - (slipTest + project + written);
+              // Retrieve manually entered RWPS components if available
+              const rwps = getStudentSubjectRWPS(s, faCode, item.key || item.name);
+              let readRef = '--';
+              let written = '--';
+              let project = '--';
+              let slipTest = '--';
+
+              if (rwps && (rwps.r !== undefined || rwps.w !== undefined || rwps.p !== undefined || rwps.s !== undefined)) {
+                readRef = (rwps.r !== undefined && rwps.r !== '' && rwps.r !== null) ? rwps.r : '--';
+                written = (rwps.w !== undefined && rwps.w !== '' && rwps.w !== null) ? rwps.w : '--';
+                project = (rwps.p !== undefined && rwps.p !== '' && rwps.p !== null) ? rwps.p : '--';
+                slipTest = (rwps.s !== undefined && rwps.s !== '' && rwps.s !== null) ? rwps.s : '--';
+              }
+
               const subGrade = calculateGradeAndGPA((obt / faLimit) * 100).grade;
 
               return {
@@ -5712,6 +6040,8 @@
                 isOptional: item.isOptional,
                 readRef, written, project, slipTest,
                 totalObt: `${obt} / ${faLimit}`,
+                rawObt: obt,
+                faLimit: faLimit,
                 grade: subGrade
               };
             } else {
@@ -5723,6 +6053,8 @@
                 project: '--',
                 slipTest: '--',
                 totalObt: `-- / ${faLimit}`,
+                rawObt: '--',
+                faLimit: faLimit,
                 grade: '--'
               };
             }
@@ -5759,23 +6091,33 @@
                 <div><span class="text-slate-500 font-bold">Roll No:</span> <strong class="font-mono text-slate-900">#${s.rollNo}</strong></div>
               </div>
 
-              <!-- CURRICULAR SUBJECTS TABLE WITH FA COMPONENTS (EXACT MATCHING IMAGE 2) -->
+              <!-- CURRICULAR SUBJECTS TABLE (8TH, 9TH, 10TH WITH RWPS; NURSERY TO 7TH STANDARD) -->
               <div class="overflow-x-auto bg-white rounded-xl border border-sky-800">
                 <table class="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr class="bg-sky-800 text-white font-black text-center text-[11px]">
-                      <th class="p-2 border-r border-sky-700 w-10">Sl No.</th>
-                      <th class="p-2 border-r border-sky-700 text-left bg-sky-900">SUBJECTS (CURRICULAR SUBJECTS)</th>
-                      <th class="p-2 border-r border-sky-700 bg-amber-700 text-slate-950 w-24">Read & Reflection</th>
-                      <th class="p-2 border-r border-sky-700 bg-amber-700 text-slate-950 w-24">Written Work</th>
-                      <th class="p-2 border-r border-sky-700 bg-amber-700 text-slate-950 w-24">Project Work</th>
-                      <th class="p-2 border-r border-sky-700 bg-amber-700 text-slate-950 w-20">Slip Test</th>
-                      <th class="p-2 border-r border-sky-700 bg-emerald-800 text-white w-20">Marks</th>
-                      <th class="p-2 bg-sky-950 text-white w-16">Grade</th>
-                    </tr>
+                    ${isHighSchool ? `
+                      <tr class="bg-sky-800 text-white font-black text-center text-[11px]">
+                        <th class="p-2 border-r border-sky-700 w-10">Sl No.</th>
+                        <th class="p-2 border-r border-sky-700 text-left bg-sky-900">SUBJECTS (CURRICULAR SUBJECTS)</th>
+                        <th class="p-2 border-r border-sky-700 bg-amber-700 text-slate-950 w-24">Read & Reflection</th>
+                        <th class="p-2 border-r border-sky-700 bg-amber-700 text-slate-950 w-24">Written Work</th>
+                        <th class="p-2 border-r border-sky-700 bg-amber-700 text-slate-950 w-24">Project Work</th>
+                        <th class="p-2 border-r border-sky-700 bg-amber-700 text-slate-950 w-20">Slip Test</th>
+                        <th class="p-2 border-r border-sky-700 bg-emerald-800 text-white w-20">Marks</th>
+                        <th class="p-2 bg-sky-950 text-white w-16">Grade</th>
+                      </tr>
+                    ` : `
+                      <tr class="bg-sky-800 text-white font-black text-center text-[11px]">
+                        <th class="p-2 border-r border-sky-700 w-12">Sl No.</th>
+                        <th class="p-2 border-r border-sky-700 text-left bg-sky-900">SUBJECTS (CURRICULAR SUBJECTS)</th>
+                        <th class="p-2 border-r border-sky-700 bg-indigo-900 text-white w-28">Max Marks</th>
+                        <th class="p-2 border-r border-sky-700 bg-emerald-800 text-white w-32">Marks Obtained</th>
+                        <th class="p-2 bg-sky-950 text-white w-20">Grade</th>
+                      </tr>
+                    `}
                   </thead>
                   <tbody class="divide-y divide-slate-300 font-bold text-center">
-                    ${faRows.map((row, idx) => `
+                    ${isHighSchool ? faRows.map((row, idx) => `
                       <tr class="hover:bg-sky-50/50">
                         <td class="p-2 border-r border-slate-300 text-slate-500">${idx + 1}</td>
                         <td class="p-2 border-r border-slate-300 text-left font-extrabold text-slate-900 bg-slate-50">${row.label}</td>
@@ -5786,17 +6128,30 @@
                         <td class="p-2 border-r border-slate-300 font-mono font-black text-emerald-950 bg-emerald-50">${row.totalObt}</td>
                         <td class="p-2 font-black text-sky-950 bg-sky-50">${row.grade}</td>
                       </tr>
+                    `).join('') : faRows.map((row, idx) => `
+                      <tr class="hover:bg-sky-50/50">
+                        <td class="p-2 border-r border-slate-300 text-slate-500">${idx + 1}</td>
+                        <td class="p-2 border-r border-slate-300 text-left font-extrabold text-slate-900 bg-slate-50">${row.label}</td>
+                        <td class="p-2 border-r border-slate-300 font-mono text-slate-700">${row.faLimit}</td>
+                        <td class="p-2 border-r border-slate-300 font-mono font-black text-emerald-950 bg-emerald-50">${row.totalObt}</td>
+                        <td class="p-2 font-black text-sky-950 bg-sky-50">${row.grade}</td>
+                      </tr>
                     `).join('')}
                     <tr class="bg-sky-100 text-sky-950 font-black text-center border-t-2 border-sky-800">
                       <td colspan="2" class="p-2 text-left uppercase font-black tracking-wider">TOTAL FORMATIVE SCORE</td>
-                      <td colspan="4" class="p-2 text-sky-800 font-medium">Cumulative Component Aggregate</td>
-                      <td class="p-2 font-mono text-base font-black text-emerald-950 bg-emerald-100">${hasMarks ? `${faObtainedSum} / ${faMaxSum}` : '--'}</td>
-                      <td class="p-2 text-base font-black text-sky-950 bg-sky-200">${faGradeInfo.grade}</td>
+                      ${isHighSchool ? `
+                        <td colspan="4" class="p-2 text-sky-800 font-medium">Cumulative Component Aggregate</td>
+                        <td class="p-2 font-mono text-base font-black text-emerald-950 bg-emerald-100">${hasMarks ? `${faObtainedSum} / ${faMaxSum}` : '--'}</td>
+                        <td class="p-2 text-base font-black text-sky-950 bg-sky-200">${faGradeInfo.grade}</td>
+                      ` : `
+                        <td class="p-2 font-mono text-slate-700">${faMaxSum}</td>
+                        <td class="p-2 font-mono text-base font-black text-emerald-950 bg-emerald-100">${hasMarks ? `${faObtainedSum} / ${faMaxSum}` : '--'}</td>
+                        <td class="p-2 text-base font-black text-sky-950 bg-sky-200">${faGradeInfo.grade}</td>
+                      `}
                     </tr>
                   </tbody>
                 </table>
               </div>
-
               <!-- BOTTOM SECTIONS (ATTENDANCE, FA SUMMARY, REMARKS MATCHING IMAGE 2) -->
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <!-- ATTENDANCE TABLE BOX -->
@@ -6075,6 +6430,10 @@
                   </div>
                   
                   <div class="flex items-center space-x-2">
+                    <button onclick="openEditMarksModal('${s.id}', '${currentSubTab.startsWith('fa') ? currentSubTab.toUpperCase() : (currentSubTab.startsWith('sa') ? currentSubTab.toUpperCase() : 'FA1')}')" class="bg-amber-600 hover:bg-amber-700 text-white font-black px-3.5 py-2 rounded-xl text-xs flex items-center space-x-1.5 shadow-md active:scale-95 transition-all" title="Enter or Edit Assessment Marks & RWPS Components">
+                      <span>✏️</span>
+                      <span>${isHighSchoolWithRWPS(s.grade) ? 'Edit RWPS / Marks' : 'Edit Marks'}</span>
+                    </button>
                     <button onclick="window.print()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-black px-4 py-2 rounded-xl text-xs flex items-center space-x-1.5 shadow-md active:scale-95 transition-all">
                       <span>🖨️</span>
                       <span>Print Current Card</span>
@@ -8915,7 +9274,7 @@
     }
 
 
-    function handleLogin(e) {
+    async function handleLogin(e) {
       if (e) e.preventDefault();
       const uInp = document.getElementById('loginUsername');
       const pInp = document.getElementById('loginPassword');
@@ -8929,43 +9288,52 @@
         return;
       }
 
-      // Match username case-insensitively across state.users
-      const matchedUser = state.users.find(usr => (usr.username || '').toLowerCase() === u);
-
-      if (!matchedUser) {
-        state.loginError = '⚠️ Access Denied! Username does not exist or this user account has been removed.';
-        render();
-        return;
+      const loginBtn = document.getElementById('loginSubmitBtn');
+      if (loginBtn) {
+        loginBtn.disabled = true;
+        loginBtn.innerHTML = '<span>⏳ Verifying credentials...</span>';
       }
 
-      if (matchedUser.status === 'Disabled' || matchedUser.status === 'Inactive') {
-        state.loginError = `⚠️ Access Denied! User account "${matchedUser.fullName}" is DISABLED. Login is blocked.`;
+      try {
+        const res = await fetch(`${CloudSync.getBaseUrl()}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: u, password: p })
+        });
+
+        const json = await res.json();
+
+        if (!res.ok || !json.success) {
+          state.loginError = json.error || '⚠️ Invalid username or password.';
+          if (loginBtn) {
+            loginBtn.disabled = false;
+            loginBtn.innerHTML = '<span>Sign In to School Portal &rarr;</span>';
+          }
+          render();
+          return;
+        }
+
+        // Authentication Successful
+        state.token = json.token;
+        state.currentUser = json.user;
+        state.loginError = '';
+        state.viewMode = 'portal';
+        localStorage.setItem('stv_auth_token', json.token);
+        localStorage.setItem('stv_auth_user_v12', JSON.stringify(json.user));
+        localStorage.setItem('stv_view_mode', 'portal');
+
+        const roleConfig = ROLES_CONFIG[json.user.role] || ROLES_CONFIG['super_admin'] || ROLES_CONFIG['admin'];
+        state.activeTab = (roleConfig.allowedTabs && roleConfig.allowedTabs[0]) ? roleConfig.allowedTabs[0] : 'dashboard';
+        state.activeModal = null;
+
         render();
-        return;
-      }
-
-      const enteredHash = sha256(p);
-      const isPasswordMatch = (matchedUser.password && matchedUser.password === p) ||
-                              (matchedUser.passwordHash && (matchedUser.passwordHash.toLowerCase() === enteredHash.toLowerCase() || matchedUser.passwordHash === p));
-
-      if (!isPasswordMatch) {
-        state.loginError = '⚠️ Incorrect Password! Please check your password.';
+        // Load latest central database records
+        await CloudSync.loadInitialData(false);
+      } catch (err) {
+        console.error('Login error:', err);
+        state.loginError = '⚠️ Connection error with authentication server. Please check your connection and try again.';
         render();
-        return;
       }
-
-      matchedUser.lastLogin = formatDateTime(new Date());
-      state.currentUser = matchedUser;
-      state.loginError = '';
-      state.viewMode = 'portal';
-      
-      const roleConfig = ROLES_CONFIG[matchedUser.role] || ROLES_CONFIG['super_admin'] || ROLES_CONFIG['admin'];
-      state.activeTab = (roleConfig.allowedTabs && roleConfig.allowedTabs[0]) ? roleConfig.allowedTabs[0] : 'dashboard';
-      state.activeModal = null;
-      saveStateLocalOnly();
-      render();
-      // Refresh latest data on successful login
-      CloudSync.loadInitialData(false);
     }
 
     function togglePasswordVisibility(empId) {
@@ -8974,18 +9342,97 @@
       render();
     }
 
-    function handleLogout() {
+    async function handleLogout(callBackend = true) {
+      const token = state.token || localStorage.getItem('stv_auth_token');
+      if (callBackend && token) {
+        try {
+          await fetch(`${CloudSync.getBaseUrl()}/api/auth/logout`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + token
+            }
+          });
+        } catch (e) {}
+      }
+
+      // Completely invalidate tokens and in-memory session caches
+      localStorage.removeItem('stv_auth_token');
+      sessionStorage.removeItem('stv_auth_token');
+      localStorage.removeItem('stv_auth_user_v12');
+      localStorage.removeItem('stv_view_mode');
+
       state.currentUser = null;
-      state.viewMode = 'public';
+      state.token = null;
+      state.students = [];
+      state.viewMode = 'login';
       state.activeTab = 'dashboard';
       state.fullProfileStudentId = null;
       state.activeModal = null;
       state.editingUser = null;
-      saveState();
+      state.loginError = '';
+
+      // Prevent browser back-button caching
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+
+      render();
+    }
+
+    async function verifyCurrentSession() {
+      const token = state.token || localStorage.getItem('stv_auth_token') || sessionStorage.getItem('stv_auth_token');
+      if (!token) {
+        state.currentUser = null;
+        state.token = null;
+        state.students = [];
+        state.viewMode = 'login';
+        state.isVerifyingAuth = false;
+        render();
+        return;
+      }
+
+      state.isVerifyingAuth = true;
+      try {
+        const res = await fetch(`${CloudSync.getBaseUrl()}/api/auth/me`, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && json.user) {
+            state.currentUser = json.user;
+            state.token = token;
+            state.isVerifyingAuth = false;
+            state.viewMode = 'portal';
+            localStorage.setItem('stv_auth_user_v12', JSON.stringify(json.user));
+            render();
+            await CloudSync.loadInitialData(false);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Session verification network check failed:', err.message);
+      }
+
+      // If token is invalid/expired
+      localStorage.removeItem('stv_auth_token');
+      sessionStorage.removeItem('stv_auth_token');
+      localStorage.removeItem('stv_auth_user_v12');
+      state.currentUser = null;
+      state.token = null;
+      state.students = [];
+      state.viewMode = 'login';
+      state.isVerifyingAuth = false;
+      render();
     }
 
     function switchViewMode(mode) {
-      state.viewMode = mode;
+      if (mode === 'portal' && (!state.token || !state.currentUser)) {
+        state.viewMode = 'login';
+      } else {
+        state.viewMode = mode;
+      }
       state.fullProfileStudentId = null;
       state.activeModal = null;
       state.editingUser = null;
@@ -10348,11 +10795,11 @@
     }
 
     // MODAL OPENERS
-    function openEditMarksModal(id) {
+    function openEditMarksModal(id, termName) {
       const s = state.students.find(st => st.id === id);
       if (s) {
         state.modalStudent = s;
-        state.modalSelectedTerm = '1st Term Exam';
+        state.modalSelectedTerm = termName || state.selectedExamFilter || 'FA1';
         state.activeModal = 'editMarks';
         saveState();
       }
@@ -10392,11 +10839,60 @@
       if (!state.modalStudent) return;
       const term = document.getElementById('examTermInput').value;
       const subjectsDetailed = getClassSubjectsDetailed(state.modalStudent.grade, term);
-      const newTermMarks = {};
+      const isFA = term.startsWith('FA');
+      const isHighSchool = isHighSchoolWithRWPS(state.modalStudent.grade) && isFA;
+
+      const existingTermMarks = state.modalStudent.termMarks?.[term] || {};
+      const newTermMarks = { ...existingTermMarks };
+      const rwpsData = { ...(newTermMarks._rwps || {}) };
+
       subjectsDetailed.forEach(subObj => {
-        const inp = document.getElementById(`sub_mark_${subObj.name.replace(/\s+/g, '_')}`);
-        newTermMarks[subObj.name] = inp ? inp.value.trim().toUpperCase() : '';
+        const subName = subObj.name;
+        const cleanKey = subName.replace(/\s+/g, '_');
+        const totalInp = document.getElementById(`sub_mark_${cleanKey}`);
+        const rInp = document.getElementById(`sub_r_${cleanKey}`);
+        const wInp = document.getElementById(`sub_w_${cleanKey}`);
+        const pInp = document.getElementById(`sub_p_${cleanKey}`);
+        const sInp = document.getElementById(`sub_s_${cleanKey}`);
+
+        let totalVal = totalInp ? totalInp.value.trim().toUpperCase() : '';
+        let rVal = rInp ? rInp.value.trim() : '';
+        let wVal = wInp ? wInp.value.trim() : '';
+        let pVal = pInp ? pInp.value.trim() : '';
+        let sVal = sInp ? sInp.value.trim() : '';
+
+        const hasAnyRWPS = rVal !== '' || wVal !== '' || pVal !== '' || sVal !== '';
+
+        if (hasAnyRWPS) {
+          const rNum = parseFloat(rVal) || 0;
+          const wNum = parseFloat(wVal) || 0;
+          const pNum = parseFloat(pVal) || 0;
+          const sNum = parseFloat(sVal) || 0;
+          let rwpsSum = Math.round((rNum + wNum + pNum + sNum) * 10) / 10;
+          const maxLimit = subObj.maxMarks || (isFA ? 20 : 100);
+
+          // Validation: RWPS total cannot exceed subject max marks
+          if (rwpsSum > maxLimit) rwpsSum = maxLimit;
+
+          rwpsData[subName] = {
+            r: rVal !== '' ? (parseFloat(rVal) || 0) : '',
+            w: wVal !== '' ? (parseFloat(wVal) || 0) : '',
+            p: pVal !== '' ? (parseFloat(pVal) || 0) : '',
+            s: sVal !== '' ? (parseFloat(sVal) || 0) : '',
+            total: rwpsSum
+          };
+
+          newTermMarks[subName] = totalVal !== '' ? totalVal : rwpsSum.toString();
+        } else {
+          if (totalVal !== '') {
+            newTermMarks[subName] = totalVal;
+          }
+        }
       });
+
+      if (isHighSchool && Object.keys(rwpsData).length > 0) {
+        newTermMarks._rwps = rwpsData;
+      }
 
       let updatedStudentRecord = null;
       state.students = state.students.map(s => {
@@ -10413,7 +10909,7 @@
       }
       saveState();
       closeModal();
-      showToast('Changes saved successfully.');
+      showToast('✅ Assessment marks and RWPS components saved successfully.');
     }
 
     function saveEditStudent(e) {
@@ -11098,27 +11594,29 @@
     if (window.location.hash && ['#about', '#facilities', '#reviews', '#contact', '#achievements', '#hero'].some(h => window.location.hash.toLowerCase().includes(h))) {
       state.viewMode = 'public';
     }
-    render();
 
-    // INITIALIZE BACKGROUND DATABASE SYNC ON STARTUP
+    // INITIALIZE SECURE AUTHENTICATION CHECK & BACKGROUND DATABASE SYNC ON STARTUP
     window.addEventListener('DOMContentLoaded', () => {
-      CloudSync.loadInitialData();
-      // Auto background sync polling every 25 seconds
+      verifyCurrentSession();
+      // Auto background sync polling every 25 seconds (only when authenticated)
       setInterval(() => {
-        if (!document.hidden) {
+        if (!document.hidden && state.token && state.currentUser) {
           CloudSync.loadInitialData(true);
         }
       }, 25000);
       // Auto sync when user switches back to this tab/window
       document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) {
+        if (!document.hidden && state.token && state.currentUser) {
           CloudSync.loadInitialData(true);
         }
       });
     });
+
     // Immediate fallback trigger if DOM is already loaded
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
-      setTimeout(() => CloudSync.loadInitialData(), 100);
+      setTimeout(() => verifyCurrentSession(), 50);
+    } else {
+      render();
     }
   
   </script>

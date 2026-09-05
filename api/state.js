@@ -1,4 +1,5 @@
 const { Client } = require('pg');
+const { requireAuth } = require('./authMiddleware');
 
 function getClient() {
   const connectionString = (process.env.DATABASE_URL || process.env.AIVEN_DATABASE_URL || '').split('?')[0];
@@ -8,7 +9,7 @@ function getClient() {
   });
 }
 
-function cleanUsersArray(users) {
+function cleanUsersArray(users, isSuperAdmin = false) {
   if (!Array.isArray(users)) return users;
   let filtered = users.filter(u => {
     if (!u) return false;
@@ -79,7 +80,9 @@ function cleanUsersArray(users) {
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Auth-Token');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -89,12 +92,24 @@ module.exports = async (req, res) => {
   try {
     await client.connect();
 
+    // Enforce Backend Authentication Guard
+    const authUser = await requireAuth(req, res, client);
+    if (!authUser) return;
+
     if (req.method === 'GET') {
       const rows = await client.query('SELECT key, value, updated_at FROM app_state');
       const stateObj = {};
       for (const r of rows.rows) {
         if (r.key === 'users') {
-          stateObj[r.key] = cleanUsersArray(r.value);
+          const cleaned = cleanUsersArray(r.value);
+          // Strip password and passwordHash for non-super-admins
+          stateObj[r.key] = cleaned.map(u => {
+            if (authUser.role === 'super_admin') return u;
+            const copy = { ...u };
+            delete copy.password;
+            delete copy.passwordHash;
+            return copy;
+          });
         } else {
           stateObj[r.key] = r.value;
         }
@@ -111,6 +126,10 @@ module.exports = async (req, res) => {
       // Support single { key, value } or multiple { updates: { key: val, ... } }
       if (body.updates && typeof body.updates === 'object') {
         for (const [k, v] of Object.entries(body.updates)) {
+          // If updating users, verify super_admin role
+          if (k === 'users' && authUser.role !== 'super_admin') {
+            continue; // Ignore unauthorized user roster edits
+          }
           const valToStore = (k === 'users') ? cleanUsersArray(v) : v;
           await client.query(`
             INSERT INTO app_state (key, value, updated_at)
@@ -124,6 +143,9 @@ module.exports = async (req, res) => {
       }
 
       if (body.key && body.value !== undefined) {
+        if (body.key === 'users' && authUser.role !== 'super_admin') {
+          return res.status(403).json({ success: false, error: 'Forbidden: Only super_admin can update user accounts.' });
+        }
         const valToStore = (body.key === 'users') ? cleanUsersArray(body.value) : body.value;
         await client.query(`
           INSERT INTO app_state (key, value, updated_at)
@@ -146,3 +168,4 @@ module.exports = async (req, res) => {
     await client.end().catch(() => {});
   }
 };
+

@@ -4,17 +4,24 @@ const http = require('http');
 const PORT = parseInt(process.env.PORT, 10) || 8080;
 const SERVER_URL = `http://localhost:${PORT}`;
 
+let authToken = null;
+
 function makeRequest(path, method = 'GET', body = null) {
   return new Promise((resolve, reject) => {
     const urlObj = new URL(path, SERVER_URL);
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
+
     const options = {
       hostname: urlObj.hostname,
       port: PORT,
       path: urlObj.pathname + urlObj.search,
       method: method,
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: headers
     };
 
     const req = http.request(options, (res) => {
@@ -50,6 +57,19 @@ async function runTests() {
   let originalTeachers = [];
 
   try {
+    // 0. Authenticate first to obtain valid session token
+    const loginRes = await makeRequest('/api/auth/login', 'POST', {
+      username: 'shaikmadar786',
+      password: 'Shaik@786'
+    });
+    if (loginRes.status === 200 && loginRes.data?.token) {
+      authToken = loginRes.data.token;
+      console.log('🔑 Authenticated successfully for cross-user sync tests.\n');
+    } else {
+      console.error('❌ Failed to authenticate:', loginRes.data);
+      process.exit(1);
+    }
+
     // 1. Health Check
     const health = await makeRequest('/api/health');
     console.log(`[CHECK 1] Server & Aiven PostgreSQL Health: Status ${health.status}`);

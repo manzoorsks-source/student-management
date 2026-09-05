@@ -11,6 +11,7 @@ const url = require('url');
 
 // Import modular API handlers
 const healthHandler = require('./api/health');
+const authHandler = require('./api/auth');
 const stateHandler = require('./api/state');
 const studentsHandler = require('./api/students');
 const academicHandler = require('./api/academic');
@@ -110,6 +111,9 @@ const server = http.createServer(async (req, res) => {
       if (pathname === '/api/health') {
         return await healthHandler(req, res);
       }
+      if (pathname === '/api/auth' || pathname.startsWith('/api/auth/')) {
+        return await authHandler(req, res);
+      }
       if (pathname === '/api/state') {
         return await stateHandler(req, res);
       }
@@ -160,7 +164,9 @@ const server = http.createServer(async (req, res) => {
 
       res.writeHead(200, {
         'Content-Type': contentType,
-        'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=3600'
+        'Cache-Control': (ext === '.html' || ext === '.js') ? 'no-store, no-cache, must-revalidate, max-age=0' : 'public, max-age=3600',
+        'Pragma': 'no-cache',
+        'X-Content-Type-Options': 'nosniff'
       });
       res.end(content);
     });
