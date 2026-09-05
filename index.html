@@ -9295,11 +9295,37 @@
       }
 
       try {
-        const res = await fetch(`${CloudSync.getBaseUrl()}/api/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: u, password: p })
-        });
+        let res = null;
+        const base = CloudSync.getBaseUrl();
+        const payload = JSON.stringify({ username: u, password: p, action: 'login' });
+
+        try {
+          res = await fetch(`${base}/api/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: payload
+          });
+        } catch (e1) {
+          res = null;
+        }
+
+        // Fallback to /api/auth?action=login if /api/auth/login is not found
+        if (!res || !res.ok) {
+          try {
+            const fallbackRes = await fetch(`${base}/api/auth?action=login`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: payload
+            });
+            if (fallbackRes && (fallbackRes.ok || fallbackRes.status === 401 || fallbackRes.status === 403 || fallbackRes.status === 400)) {
+              res = fallbackRes;
+            }
+          } catch (e2) {}
+        }
+
+        if (!res) {
+          throw new Error('Authentication server unreachable');
+        }
 
         const json = await res.json();
 
@@ -9332,6 +9358,10 @@
       } catch (err) {
         console.error('Login error:', err);
         state.loginError = '⚠️ Connection error with authentication server. Please check your connection and try again.';
+        if (loginBtn) {
+          loginBtn.disabled = false;
+          loginBtn.innerHTML = '<span>Sign In to School Portal &rarr;</span>';
+        }
         render();
       }
     }
@@ -9346,12 +9376,23 @@
       const token = state.token || localStorage.getItem('stv_auth_token');
       if (callBackend && token) {
         try {
-          await fetch(`${CloudSync.getBaseUrl()}/api/auth/logout`, {
+          const base = CloudSync.getBaseUrl();
+          await fetch(`${base}/api/auth/logout`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': 'Bearer ' + token
-            }
+            },
+            body: JSON.stringify({ action: 'logout', token })
+          }).catch(async () => {
+            await fetch(`${base}/api/auth?action=logout`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+              },
+              body: JSON.stringify({ action: 'logout', token })
+            }).catch(() => {});
           });
         } catch (e) {}
       }
@@ -9394,11 +9435,28 @@
 
       state.isVerifyingAuth = true;
       try {
-        const res = await fetch(`${CloudSync.getBaseUrl()}/api/auth/me`, {
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
+        const base = CloudSync.getBaseUrl();
+        let res = null;
+        try {
+          res = await fetch(`${base}/api/auth/me`, {
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+        } catch (e) {
+          res = null;
+        }
 
-        if (res.ok) {
+        if (!res || !res.ok) {
+          try {
+            const fallbackRes = await fetch(`${base}/api/auth?action=me`, {
+              headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (fallbackRes && fallbackRes.ok) {
+              res = fallbackRes;
+            }
+          } catch (e2) {}
+        }
+
+        if (res && res.ok) {
           const json = await res.json();
           if (json.success && json.user) {
             state.currentUser = json.user;

@@ -1,5 +1,10 @@
 const { Client } = require('pg');
 
+
+if (!process.env.DATABASE_URL && !process.env.AIVEN_DATABASE_URL) {
+  try { require('dotenv').config(); } catch (e) {}
+}
+
 function getClient() {
   const connectionString = (process.env.DATABASE_URL || process.env.AIVEN_DATABASE_URL || '').split('?')[0];
   return new Client({

@@ -2,6 +2,11 @@ const { Client } = require('pg');
 const crypto = require('crypto');
 const { extractToken, verifySessionToken } = require('./authMiddleware');
 
+
+if (!process.env.DATABASE_URL && !process.env.AIVEN_DATABASE_URL) {
+  try { require('dotenv').config(); } catch (e) {}
+}
+
 function getClient() {
   const connectionString = (process.env.DATABASE_URL || process.env.AIVEN_DATABASE_URL || '').split('?')[0];
   return new Client({
@@ -57,6 +62,27 @@ const SEED_USERS = [
   }
 ];
 
+async function ensureAuthSessionsTable(client) {
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS auth_sessions (
+        token VARCHAR(128) PRIMARY KEY,
+        emp_id VARCHAR(50) NOT NULL,
+        username VARCHAR(100) NOT NULL,
+        role VARCHAR(50) NOT NULL,
+        user_data JSONB NOT NULL DEFAULT '{}'::jsonb,
+        expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        ip_address VARCHAR(100),
+        user_agent TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        last_activity TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+  } catch (e) {
+    console.warn('ensureAuthSessionsTable warning:', e.message);
+  }
+}
+
 async function getUsersFromDb(client) {
   try {
     const res = await client.query("SELECT value FROM app_state WHERE key = 'users'");
@@ -88,20 +114,52 @@ module.exports = async (req, res) => {
     return res.status(200).end();
   }
 
+  // Parse body if string
+  if (typeof req.body === 'string') {
+    try {
+      req.body = JSON.parse(req.body);
+    } catch (e) {
+      req.body = {};
+    }
+  }
+
   const client = getClient();
   try {
     await client.connect();
+    await ensureAuthSessionsTable(client);
 
-    const pathname = (req.url || '').split('?')[0];
-    const isLogin = req.method === 'POST' && (pathname === '/api/auth/login' || pathname === '/api/auth' || req.query.action === 'login');
-    const isLogout = req.method === 'POST' && (pathname === '/api/auth/logout' || req.query.action === 'logout');
-    const isMe = req.method === 'GET' && (pathname === '/api/auth/me' || pathname === '/api/auth' || req.query.action === 'me');
+    const rawUrl = req.url || '';
+    const pathname = rawUrl.split('?')[0].toLowerCase();
+    const query = req.query || {};
+    const body = req.body || {};
+    const action = (query.action || body.action || '').toLowerCase();
+
+    const isLogin = req.method === 'POST' && (
+      pathname.endsWith('/login') ||
+      pathname === '/api/auth' ||
+      pathname === '/api/auth.js' ||
+      action === 'login' ||
+      (body.username && body.password && !action)
+    );
+
+    const isLogout = req.method === 'POST' && (
+      pathname.endsWith('/logout') ||
+      action === 'logout'
+    );
+
+    const isMe = req.method === 'GET' && (
+      pathname.endsWith('/me') ||
+      pathname === '/api/auth' ||
+      pathname === '/api/auth.js' ||
+      action === 'me' ||
+      !action
+    );
 
     // ==========================================
-    // 1. LOGIN: POST /api/auth/login
+    // 1. LOGIN: POST /api/auth/login or /api/auth
     // ==========================================
     if (isLogin && !isLogout) {
-      const { username, password } = req.body || {};
+      const { username, password } = body;
 
       if (!username || !password) {
         return res.status(400).json({
@@ -189,7 +247,7 @@ module.exports = async (req, res) => {
     // 2. LOGOUT: POST /api/auth/logout
     // ==========================================
     if (isLogout) {
-      const token = extractToken(req) || (req.body && req.body.token);
+      const token = extractToken(req) || (body && body.token);
 
       if (token) {
         await client.query('DELETE FROM auth_sessions WHERE token = $1', [token]);
