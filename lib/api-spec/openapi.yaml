@@ -1,0 +1,611 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: India Fashions storefront and operations API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+  - name: storefront
+  - name: products
+  - name: orders
+  - name: admin
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /storefront/summary:
+    get:
+      operationId: getStorefrontSummary
+      tags: [storefront]
+      summary: Get storefront content and featured products
+      responses:
+        "200":
+          description: Storefront summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorefrontSummary"
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: List and filter products
+      parameters:
+        - $ref: "#/components/parameters/Search"
+        - $ref: "#/components/parameters/Category"
+        - $ref: "#/components/parameters/MinPrice"
+        - $ref: "#/components/parameters/MaxPrice"
+        - $ref: "#/components/parameters/Color"
+        - $ref: "#/components/parameters/Fabric"
+        - name: availability
+          in: query
+          schema:
+            type: string
+            enum: [all, available, low_stock, out_of_stock]
+            default: all
+        - name: sale
+          in: query
+          schema:
+            type: boolean
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [newest, price_asc, price_desc, popular]
+            default: newest
+      responses:
+        "200":
+          description: Product list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductCard"
+  /products/{slug}:
+    get:
+      operationId: getProduct
+      tags: [products]
+      summary: Get a product by slug
+      parameters:
+        - $ref: "#/components/parameters/Slug"
+      responses:
+        "200":
+          description: Product detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /advance-orders:
+    post:
+      operationId: createAdvanceOrder
+      tags: [orders]
+      summary: Request an advance order for an unavailable variant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdvanceOrderInput"
+      responses:
+        "201":
+          description: Advance order request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdvanceOrder"
+  /orders:
+    post:
+      operationId: createOrder
+      tags: [orders]
+      summary: Create an order after rechecking stock and price
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderInput"
+      responses:
+        "201":
+          description: Created order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /orders/{id}:
+    get:
+      operationId: getOrder
+      tags: [orders]
+      summary: Get order status
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /admin/dashboard:
+    get:
+      operationId: getAdminDashboard
+      tags: [admin]
+      summary: Get dashboard metrics and activity
+      responses:
+        "200":
+          description: Dashboard overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDashboard"
+  /admin/products:
+    get:
+      operationId: listAdminProducts
+      tags: [admin]
+      summary: List products for operations
+      parameters:
+        - $ref: "#/components/parameters/Search"
+      responses:
+        "200":
+          description: Admin product list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminProduct"
+    post:
+      operationId: createProduct
+      tags: [admin]
+      summary: Create a product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductInput"
+      responses:
+        "201":
+          description: Created product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminProduct"
+  /admin/products/{id}:
+    patch:
+      operationId: updateProduct
+      tags: [admin]
+      summary: Update a product
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductUpdate"
+      responses:
+        "200":
+          description: Updated product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminProduct"
+  /admin/orders:
+    get:
+      operationId: listAdminOrders
+      tags: [admin]
+      summary: List orders for operations
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [all, placed, confirmed, packed, shipped, delivered, cancelled, returned]
+            default: all
+      responses:
+        "200":
+          description: Orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+  /admin/advance-orders:
+    get:
+      operationId: listAdminAdvanceOrders
+      tags: [admin]
+      summary: List advance-order requests
+      responses:
+        "200":
+          description: Advance orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdvanceOrder"
+  /admin/inventory/{variantId}/adjust:
+    post:
+      operationId: adjustInventory
+      tags: [admin]
+      summary: Adjust inventory for a SKU
+      parameters:
+        - name: variantId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InventoryAdjustment"
+      responses:
+        "200":
+          description: Updated inventory
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryResult"
+  /admin/settings:
+    get:
+      operationId: getAdminSettings
+      tags: [admin]
+      summary: Get store settings
+      responses:
+        "200":
+          description: Store settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreSettings"
+    patch:
+      operationId: updateAdminSettings
+      tags: [admin]
+      summary: Update store settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoreSettingsUpdate"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoreSettings"
+components:
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    Slug:
+      name: slug
+      in: path
+      required: true
+      schema:
+        type: string
+    Search:
+      name: search
+      in: query
+      schema:
+        type: string
+    Category:
+      name: category
+      in: query
+      schema:
+        type: string
+    MinPrice:
+      name: minPrice
+      in: query
+      schema:
+        type: number
+    MaxPrice:
+      name: maxPrice
+      in: query
+      schema:
+        type: number
+    Color:
+      name: color
+      in: query
+      schema:
+        type: string
+    Fabric:
+      name: fabric
+      in: query
+      schema:
+        type: string
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Conflict:
+      description: Business rule conflict
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    Image:
+      type: object
+      properties:
+        id: { type: string }
+        url: { type: string }
+        alt: { type: string }
+        isPrimary: { type: boolean }
+      required: [id, url, alt, isPrimary]
+    Variant:
+      type: object
+      properties:
+        id: { type: string }
+        sku: { type: string }
+        color: { type: string }
+        size: { type: string }
+        price: { type: number }
+        salePrice: { type: ["number", "null"] }
+        quantity: { type: integer, minimum: 0 }
+        lowStockThreshold: { type: integer, minimum: 0 }
+      required: [id, sku, color, size, price, salePrice, quantity, lowStockThreshold]
+    ProductCard:
+      type: object
+      properties:
+        id: { type: string }
+        slug: { type: string }
+        name: { type: string }
+        category: { type: string }
+        fabric: { type: string }
+        image: { $ref: "#/components/schemas/Image" }
+        price: { type: number }
+        originalPrice: { type: ["number", "null"] }
+        badge: { type: ["string", "null"] }
+        availability:
+          type: string
+          enum: [available, low_stock, out_of_stock]
+        reviewCount: { type: integer }
+      required: [id, slug, name, category, fabric, image, price, originalPrice, badge, availability, reviewCount]
+    Product:
+      allOf:
+        - $ref: "#/components/schemas/ProductCard"
+        - type: object
+          properties:
+            description: { type: string }
+            care: { type: string }
+            images:
+              type: array
+              items: { $ref: "#/components/schemas/Image" }
+            variants:
+              type: array
+              items: { $ref: "#/components/schemas/Variant" }
+            seoTitle: { type: string }
+            seoDescription: { type: string }
+          required: [description, care, images, variants, seoTitle, seoDescription]
+    StorefrontSummary:
+      type: object
+      properties:
+        brandName: { type: string }
+        tagline: { type: string }
+        ticker:
+          type: array
+          items: { type: string }
+        hero:
+          type: object
+          properties:
+            eyebrow: { type: string }
+            title: { type: string }
+            body: { type: string }
+            cta: { type: string }
+            image: { $ref: "#/components/schemas/Image" }
+          required: [eyebrow, title, body, cta, image]
+        categories:
+          type: array
+          items: { type: string }
+        featured:
+          type: array
+          items: { $ref: "#/components/schemas/ProductCard" }
+        newArrivals:
+          type: array
+          items: { $ref: "#/components/schemas/ProductCard" }
+        trustPoints:
+          type: array
+          items:
+            type: object
+            properties:
+              title: { type: string }
+              body: { type: string }
+            required: [title, body]
+      required: [brandName, tagline, ticker, hero, categories, featured, newArrivals, trustPoints]
+    AdvanceOrderInput:
+      type: object
+      properties:
+        variantId: { type: string }
+        productName: { type: string }
+        customerName: { type: string, minLength: 1 }
+        phone: { type: string, minLength: 5 }
+        note: { type: string }
+      required: [variantId, productName, customerName, phone]
+    AdvanceOrder:
+      allOf:
+        - $ref: "#/components/schemas/AdvanceOrderInput"
+        - type: object
+          properties:
+            id: { type: string }
+            status:
+              type: string
+              enum: [pending, allocated, scheduled, notified]
+            createdAt: { type: string, format: date-time }
+          required: [id, status, createdAt]
+    OrderItemInput:
+      type: object
+      properties:
+        variantId: { type: string }
+        productName: { type: string }
+        sku: { type: string }
+        quantity: { type: integer, minimum: 1 }
+        unitPrice: { type: number, minimum: 0 }
+      required: [variantId, productName, sku, quantity, unitPrice]
+    OrderInput:
+      type: object
+      properties:
+        customerName: { type: string, minLength: 1 }
+        phone: { type: string, minLength: 5 }
+        address: { type: string, minLength: 5 }
+        distanceKm: { type: number, minimum: 0 }
+        paymentMethod:
+          type: string
+          enum: [upi, card, bank_transfer, cod]
+        paymentReference: { type: ["string", "null"] }
+        items:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/OrderItemInput" }
+      required: [customerName, phone, address, distanceKm, paymentMethod, items]
+    Order:
+      allOf:
+        - $ref: "#/components/schemas/OrderInput"
+        - type: object
+          properties:
+            id: { type: string }
+            orderNumber: { type: string }
+            total: { type: number }
+            paymentStatus:
+              type: string
+              enum: [pending, paid, failed, verification_required, refunded]
+            fulfilmentStatus:
+              type: string
+              enum: [placed, confirmed, packed, shipped, delivered, cancelled, returned]
+            createdAt: { type: string, format: date-time }
+          required: [id, orderNumber, total, paymentStatus, fulfilmentStatus, createdAt]
+    AdminProduct:
+      allOf:
+        - $ref: "#/components/schemas/Product"
+        - type: object
+          properties:
+            costPrice: { type: number }
+            status:
+              type: string
+              enum: [draft, published, archived]
+          required: [costPrice, status]
+    ProductInput:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        category: { type: string, minLength: 1 }
+        fabric: { type: string, minLength: 1 }
+        description: { type: string }
+        care: { type: string }
+        costPrice: { type: number, minimum: 0 }
+        price: { type: number, minimum: 0 }
+        imageUrl: { type: string }
+      required: [name, category, fabric, description, care, costPrice, price, imageUrl]
+    ProductUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        price: { type: number, minimum: 0 }
+        salePrice: { type: ["number", "null"], minimum: 0 }
+        status:
+          type: string
+          enum: [draft, published, archived]
+    AdminDashboard:
+      type: object
+      properties:
+        salesToday: { type: number }
+        pendingOrders: { type: integer }
+        lowStock: { type: integer }
+        outOfStock: { type: integer }
+        paymentVerification: { type: integer }
+        advanceOrders: { type: integer }
+        topCategories:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              value: { type: number }
+            required: [name, value]
+        recentActivity:
+          type: array
+          items:
+            type: object
+            properties:
+              label: { type: string }
+              detail: { type: string }
+              time: { type: string }
+            required: [label, detail, time]
+      required: [salesToday, pendingOrders, lowStock, outOfStock, paymentVerification, advanceOrders, topCategories, recentActivity]
+    InventoryAdjustment:
+      type: object
+      properties:
+        delta: { type: integer }
+        reason: { type: string, minLength: 1 }
+      required: [delta, reason]
+    InventoryResult:
+      type: object
+      properties:
+        variantId: { type: string }
+        quantity: { type: integer, minimum: 0 }
+      required: [variantId, quantity]
+    StoreSettings:
+      type: object
+      properties:
+        brandName: { type: string }
+        shopAddress: { type: string }
+        deliveryRadiusKm: { type: number }
+        deliveryCharge: { type: number }
+        codEnabled: { type: boolean }
+        upiEnabled: { type: boolean }
+        cardEnabled: { type: boolean }
+        bankTransferEnabled: { type: boolean }
+      required: [brandName, shopAddress, deliveryRadiusKm, deliveryCharge, codEnabled, upiEnabled, cardEnabled, bankTransferEnabled]
+    StoreSettingsUpdate:
+      type: object
+      properties:
+        brandName: { type: string, minLength: 1 }
+        shopAddress: { type: string }
+        deliveryRadiusKm: { type: number, minimum: 0 }
+        deliveryCharge: { type: number, minimum: 0 }
+        codEnabled: { type: boolean }
+        upiEnabled: { type: boolean }
+        cardEnabled: { type: boolean }
+        bankTransferEnabled: { type: boolean }

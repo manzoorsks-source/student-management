@@ -1,29 +1,49 @@
-# Git Portable Binaries & Archives
-mingit/
-mingit.zip
-*.zip
-*.tar.gz
-*.7z
+# See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
-# Executables & Logs
-*.exe
-server_log.txt
-server_err.txt
-server_output.txt
+# compiled output
+dist
+tmp
+out-tsc
+*.tsbuildinfo
+.expo
+.expo-shared
 
-# Temporary Render & Test Files
-rendered_dom.txt
-rendered_table.txt
-edge_dom.html
-test_*.html
+# dependencies
+node_modules
 
-# OS and Editor files
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# misc
+/.sass-cache
+/connect.lock
+/coverage
+/libpeerconnection.log
+npm-debug.log
+yarn-error.log
+testem.log
+/typings
+
+# System Files
 .DS_Store
 Thumbs.db
-.vscode/
-.idea/
 
-.vercel
-node_modules/
+.cursor/rules/nx-rules.mdc
+.github/instructions/nx.instructions.md
 
-.env
+# Replit
+.cache/
+.local/

@@ -1,17 +1,19 @@
 {
-  "name": "school-management-system",
-  "version": "1.0.0",
-  "description": "A comprehensive, responsive, and feature-rich Web-Based School & Student Management System built for modern educational administration.",
-  "main": "index.js",
+  "name": "workspace",
+  "version": "0.0.0",
+  "license": "MIT",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
+    "build": "pnpm run typecheck && pnpm -r --if-present run build",
+    "typecheck:libs": "tsc --build",
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "private": true,
   "dependencies": {
-    "dotenv": "^17.4.2",
-    "pg": "^8.23.0",
-    "xlsx": "^0.18.5"
+    "@replit/connectors-sdk": "^0.4.3"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.6",
+    "typescript": "~5.9.3"
   }
 }

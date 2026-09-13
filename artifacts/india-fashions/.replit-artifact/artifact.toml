@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "India Fashions"
+description = "A premium saree storefront with customer shopping, local delivery, and a role-based operations dashboard for a family-run fashion boutique."
+version = "1.0.0"
+id = "artifacts/india-fashions"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19228
+
+[services.development]
+run = "pnpm --filter @workspace/india-fashions run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/india-fashions", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/india-fashions/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19228"
+BASE_PATH = "/"
