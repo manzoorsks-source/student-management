@@ -58,6 +58,7 @@ function parseStudentFromRow(row) {
   studentObj.examFee = row.exam_fee !== null ? parseFloat(row.exam_fee) : (parseFloat(studentObj.examFee) || 0);
   studentObj.paidMonths = row.paid_months !== null ? parseInt(row.paid_months, 10) : (parseInt(studentObj.paidMonths, 10) || 0);
   studentObj.totalMonths = row.total_months !== null ? parseInt(row.total_months, 10) : (parseInt(studentObj.totalMonths, 10) || 11);
+  studentObj.concession = parseFloat(studentObj.concession !== undefined ? studentObj.concession : (studentObj.feeDiscount !== undefined ? studentObj.feeDiscount : ((row.data && (row.data.concession || row.data.feeDiscount)) || 0))) || 0;
   studentObj.status = row.status || studentObj.status || 'Active';
 
   // Ensure default structures exist
@@ -215,6 +216,7 @@ async function upsertStudent(client, s) {
   const examFee = parseFloat(s.examFee !== undefined ? s.examFee : s.exam_fee) || 0;
   const paidMonths = parseInt(s.paidMonths !== undefined ? s.paidMonths : s.paid_months, 10) || 0;
   const totalMonths = parseInt(s.totalMonths !== undefined ? s.totalMonths : s.total_months, 10) || 11;
+  const concession = parseFloat(s.concession !== undefined ? s.concession : (s.feeDiscount !== undefined ? s.feeDiscount : 0)) || 0;
   const status = s.status || 'Active';
 
   // Normalize full object to store in data JSONB
@@ -249,6 +251,7 @@ async function upsertStudent(client, s) {
     examFee,
     paidMonths,
     totalMonths,
+    concession,
     status
   };
 
