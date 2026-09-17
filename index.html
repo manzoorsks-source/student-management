@@ -1045,6 +1045,12 @@
         { id: 102, title: 'Prepare 1st Assessment Question Papers', completed: false }
       ]),
       classFeeStructure: safeLoadJson('stv_fee_structure_v1', DEFAULT_CLASS_FEE_STRUCTURE),
+      feeSubView: localStorage.getItem('stv_fee_subview') || 'ledger',
+      feeFilterDate: localStorage.getItem('stv_fee_filter_date') || getTodayIsoDate(),
+      feeFilterDateMode: localStorage.getItem('stv_fee_filter_datemode') || 'today',
+      feeFilterClass: 'all',
+      feeFilterMode: 'all',
+      feeFilterSearch: '',
       lastReceiptSequence: safeLoadJson('stv_receipt_seq_v1', 0),
       classSubjectsMap: DEFAULT_CLASS_SUBJECTS,
       examsList: DEFAULT_EXAMS,
@@ -1442,6 +1448,9 @@
       localStorage.setItem('stv_attendance_cal_month', JSON.stringify(state.selectedCalendarMonth !== undefined ? state.selectedCalendarMonth : 7));
       localStorage.setItem('stv_notes_v10', JSON.stringify(state.notes));
       localStorage.setItem('stv_tasks_v10', JSON.stringify(state.tasks));
+      localStorage.setItem('stv_fee_subview', state.feeSubView || 'ledger');
+      localStorage.setItem('stv_fee_filter_date', state.feeFilterDate || getTodayIsoDate());
+      localStorage.setItem('stv_fee_filter_datemode', state.feeFilterDateMode || 'today');
     }
 
     function saveState() {
@@ -2016,6 +2025,315 @@
       });
 
       return [examRow, ...monthlyRows];
+    }
+
+    // =========================================================================
+    // DAILY FEE COLLECTION STATEMENT & REGISTER ENGINE
+    // =========================================================================
+    function getYesterdayIsoDate() {
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function formatDisplayDate(dateStr) {
+      if (!dateStr) return 'N/A';
+      try {
+        const parts = String(dateStr).trim().split('-');
+        if (parts.length === 3) {
+          const y = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10) - 1;
+          const d = parseInt(parts[2], 10);
+          const dt = new Date(y, m, d);
+          if (!isNaN(dt.getTime())) {
+            const dayName = dt.toLocaleDateString('en-US', { weekday: 'short' });
+            const formatted = dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+            return `${formatted} (${dayName})`;
+          }
+        }
+      } catch (e) {}
+      return dateStr;
+    }
+
+    function getAllFeeTransactions() {
+      const list = [];
+      (state.students || []).forEach(s => {
+        if (!s) return;
+        const history = s.paymentHistory || [];
+        if (Array.isArray(history)) {
+          history.forEach(p => {
+            if (!p) return;
+            const amt = parseFloat(p.amount) || 0;
+            if (amt <= 0 && (!p.receiptNo || p.receiptNo === 'None')) return;
+            list.push({
+              receiptNo: p.receiptNo || 'N/A',
+              date: p.date ? String(p.date).trim().substring(0, 10) : '',
+              month: p.month || 'Tuition Fee',
+              mode: p.mode || 'Cash',
+              amount: amt,
+              studentId: s.id,
+              studentName: s.name || '',
+              rollNo: s.rollNo || '',
+              admnNo: s.admnNo || s.id,
+              grade: s.grade || '',
+              section: s.section || '',
+              parentName: s.parentName || '',
+              contactPhone: s.phone || s.contactPhone || s.fatherMobile || ''
+            });
+          });
+        }
+      });
+
+      // Sort descending by date (latest first), then descending by receipt sequence/number
+      list.sort((a, b) => {
+        const dComp = (b.date || '').localeCompare(a.date || '');
+        if (dComp !== 0) return dComp;
+        return (b.receiptNo || '').localeCompare(a.receiptNo || '');
+      });
+
+      return list;
+    }
+
+    function getFilteredFeeTransactions() {
+      const all = getAllFeeTransactions();
+      const dateMode = state.feeFilterDateMode || 'today';
+      const todayIso = getTodayIsoDate();
+      const yesterdayIso = getYesterdayIsoDate();
+      const filterDate = state.feeFilterDate || todayIso;
+      const currentMonthPrefix = todayIso.substring(0, 7); // e.g. "2026-09"
+      const filterClass = state.feeFilterClass || 'all';
+      const filterMode = state.feeFilterMode || 'all';
+      const search = (state.feeFilterSearch || '').toLowerCase().trim();
+
+      return all.filter(t => {
+        // Date filter
+        if (dateMode === 'today') {
+          if (t.date !== todayIso) return false;
+        } else if (dateMode === 'yesterday') {
+          if (t.date !== yesterdayIso) return false;
+        } else if (dateMode === 'this_month') {
+          if (!t.date || !t.date.startsWith(currentMonthPrefix)) return false;
+        } else if (dateMode === 'custom') {
+          if (t.date !== filterDate) return false;
+        }
+        // if 'all', date condition passes
+
+        // Class filter
+        if (filterClass !== 'all') {
+          if (!isSameClass(t.grade, filterClass)) return false;
+        }
+
+        // Payment Mode filter
+        if (filterMode !== 'all') {
+          if ((t.mode || '').toLowerCase() !== filterMode.toLowerCase()) return false;
+        }
+
+        // Search filter
+        if (search) {
+          const matchName = (t.studentName || '').toLowerCase().includes(search);
+          const matchReceipt = (t.receiptNo || '').toLowerCase().includes(search);
+          const matchAdmn = (t.admnNo || '').toLowerCase().includes(search);
+          const matchId = (t.studentId || '').toLowerCase().includes(search);
+          const matchPhone = (t.contactPhone || '').toLowerCase().includes(search);
+          if (!matchName && !matchReceipt && !matchAdmn && !matchId && !matchPhone) return false;
+        }
+
+        return true;
+      });
+    }
+
+    function getDailyCollectionRollup(transactions) {
+      const map = {};
+      (transactions || []).forEach(t => {
+        const d = t.date || 'Unknown Date';
+        if (!map[d]) {
+          map[d] = {
+            date: d,
+            count: 0,
+            cashTotal: 0,
+            cashCount: 0,
+            upiTotal: 0,
+            upiCount: 0,
+            grandTotal: 0,
+            studentsSet: new Set()
+          };
+        }
+        map[d].count++;
+        map[d].grandTotal += t.amount;
+        map[d].studentsSet.add(t.studentId);
+        const mode = (t.mode || '').toLowerCase();
+        if (mode.includes('cash')) {
+          map[d].cashTotal += t.amount;
+          map[d].cashCount++;
+        } else {
+          map[d].upiTotal += t.amount;
+          map[d].upiCount++;
+        }
+      });
+
+      const list = Object.values(map);
+      list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      return list;
+    }
+
+    function setFeeSubView(view) {
+      state.feeSubView = view;
+      localStorage.setItem('stv_fee_subview', view);
+      render();
+    }
+
+    function setFeeDatePreset(preset) {
+      state.feeFilterDateMode = preset;
+      if (preset === 'today') {
+        state.feeFilterDate = getTodayIsoDate();
+      } else if (preset === 'yesterday') {
+        state.feeFilterDate = getYesterdayIsoDate();
+      } else if (preset === 'this_month') {
+        state.feeFilterDate = getTodayIsoDate().substring(0, 7);
+      } else if (preset === 'all') {
+        state.feeFilterDate = '';
+      }
+      localStorage.setItem('stv_fee_filter_datemode', preset);
+      localStorage.setItem('stv_fee_filter_date', state.feeFilterDate);
+      render();
+    }
+
+    function setFeeCustomDate(val) {
+      state.feeFilterDate = val;
+      state.feeFilterDateMode = 'custom';
+      localStorage.setItem('stv_fee_filter_datemode', 'custom');
+      localStorage.setItem('stv_fee_filter_date', val);
+      render();
+    }
+
+    function setFeeFilterClass(cls) {
+      state.feeFilterClass = cls;
+      render();
+    }
+
+    function setFeeFilterMode(m) {
+      state.feeFilterMode = m;
+      render();
+    }
+
+    function setFeeFilterSearch(term) {
+      state.feeFilterSearch = term;
+      render();
+    }
+
+    function resetFeeFilters() {
+      state.feeFilterDateMode = 'today';
+      state.feeFilterDate = getTodayIsoDate();
+      state.feeFilterClass = 'all';
+      state.feeFilterMode = 'all';
+      state.feeFilterSearch = '';
+      localStorage.setItem('stv_fee_filter_datemode', 'today');
+      localStorage.setItem('stv_fee_filter_date', state.feeFilterDate);
+      render();
+    }
+
+    function exportDailyFeeCollectionExcel() {
+      const filtered = getFilteredFeeTransactions();
+      if (!filtered || filtered.length === 0) {
+        alert('No fee payment records found for the selected filter to export.');
+        return;
+      }
+
+      if (typeof XLSX === 'undefined') {
+        alert('Excel Export library (SheetJS) is not loaded. Please ensure you have an active internet connection.');
+        return;
+      }
+
+      const wb = XLSX.utils.book_new();
+
+      // 1. Details Sheet
+      const detailsRows = filtered.map((t, idx) => ({
+        'S.No': idx + 1,
+        'Receipt No': t.receiptNo,
+        'Payment Date': t.date,
+        'Student ID': t.studentId,
+        'Admission No': t.admnNo,
+        'Roll No': t.rollNo,
+        'Student Name': t.studentName,
+        'Class': t.grade,
+        'Section': t.section,
+        'Parent Name': t.parentName,
+        'Contact Mobile': t.contactPhone,
+        'Fee Month / Description': t.month,
+        'Payment Mode': t.mode,
+        'Amount (INR)': t.amount
+      }));
+
+      // Grand Total Row
+      const totalAmt = filtered.reduce((s, t) => s + t.amount, 0);
+      detailsRows.push({
+        'S.No': '',
+        'Receipt No': 'GRAND TOTAL',
+        'Payment Date': '',
+        'Student ID': '',
+        'Admission No': '',
+        'Roll No': '',
+        'Student Name': '',
+        'Class': '',
+        'Section': '',
+        'Parent Name': '',
+        'Contact Mobile': '',
+        'Fee Month / Description': `Total Receipts: ${filtered.length}`,
+        'Payment Mode': '',
+        'Amount (INR)': totalAmt
+      });
+
+      const wsDetails = XLSX.utils.json_to_sheet(detailsRows);
+      XLSX.utils.book_append_sheet(wb, wsDetails, 'Daily_Collection_Register');
+
+      // 2. Summary Sheet
+      let cashTotal = 0, cashCount = 0, upiTotal = 0, upiCount = 0;
+      const uniqueStudents = new Set();
+      filtered.forEach(t => {
+        uniqueStudents.add(t.studentId);
+        const m = (t.mode || '').toLowerCase();
+        if (m.includes('cash')) {
+          cashTotal += t.amount;
+          cashCount++;
+        } else {
+          upiTotal += t.amount;
+          upiCount++;
+        }
+      });
+
+      const summaryData = [
+        ['ST. VENUS HIGH SCHOOL - DAILY FEE COLLECTION STATEMENT & CASHBOOK'],
+        ['(Recognised by Govt. of Telangana) • Uppal, Hyderabad - 500039'],
+        ['Academic Year: ' + (state.activeAcademicYear || '2026–2027'), 'Generated On: ' + new Date().toLocaleString('en-GB')],
+        ['Filter Criteria: ' + (state.feeFilterDateMode === 'today' ? 'Today (' + getTodayIsoDate() + ')' : (state.feeFilterDateMode === 'yesterday' ? 'Yesterday (' + getYesterdayIsoDate() + ')' : (state.feeFilterDateMode === 'this_month' ? 'This Month (' + getTodayIsoDate().substring(0, 7) + ')' : (state.feeFilterDateMode === 'all' ? 'All Dates' : state.feeFilterDate))))],
+        [],
+        ['METRIC / HEAD', 'VALUE / COUNT', 'TOTAL AMOUNT (INR)'],
+        ['Total Cash Collection', `${cashCount} Receipts`, cashTotal],
+        ['Total UPI / Online Transfer', `${upiCount} Receipts`, upiTotal],
+        ['GRAND TOTAL COLLECTION', `${filtered.length} Receipts (${uniqueStudents.size} Students)`, totalAmt]
+      ];
+
+      const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, wsSummary, 'Executive_Summary');
+
+      const dateTag = state.feeFilterDateMode === 'all' ? 'ALL_DATES' : (state.feeFilterDate || getTodayIsoDate());
+      XLSX.writeFile(wb, `ST_VENUS_Daily_Fee_Collection_${dateTag}.xlsx`);
+    }
+
+    function openDailyFeeStatementModal() {
+      const filtered = getFilteredFeeTransactions();
+      if (!filtered || filtered.length === 0) {
+        alert('No fee payment records found for the selected filter to print.');
+        return;
+      }
+      state.activeModal = 'printDailyStatement';
+      saveState();
+      setTimeout(() => {
+        window.print();
+      }, 300);
     }
 
     // --- MODULE TEMPLATE SCHEMAS FOR BULK IMPORT & EXPORT ---
@@ -4607,45 +4925,467 @@
 
             ${state.activeTab === 'fees' && canAccessTab(state.currentUser.role, 'fees') ? `
               <div class="space-y-6">
-                <!-- OFFICIAL SCHOOL FEE STRUCTURE REFERENCE TABLE CARD -->
-                <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-5 shadow-sm space-y-4 border border-amber-400/40">
-                  <div class="flex flex-wrap justify-between items-center gap-3 border-b border-indigo-800/80 pb-3">
-                    <div>
-                      <div class="inline-flex items-center space-x-2 bg-amber-400 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                        <span>ST. VENUS HIGH SCHOOL</span>
-                      </div>
-                      <h3 class="text-lg font-black font-display tracking-tight text-white mt-1">FEE STRUCTURE FOR THE ACADEMIC YEAR – 2026 – 2027</h3>
-                      <p class="text-xs text-indigo-200">Official Class-wise Fee Schedule (Monthly Fee, Yearly Exam Fee & Total Yearly Package)</p>
-                    </div>
-                    ${state.currentUser && state.currentUser.role === 'super_admin' ? `
-                      <button onclick="openEditFeeStructureModal()" class="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-4 py-2 rounded-xl text-xs shadow-md transition-all">
-                        ⚙️ Edit Official Fee Rates (Super Admin)
-                      </button>
-                    ` : ''}
+
+                <!-- TOP FEE MODULE SUB-NAVIGATION SWITCHER -->
+                <div class="flex flex-wrap items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="setFeeSubView('ledger')" class="px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center space-x-2 active:scale-95 ${state.feeSubView !== 'dailyRegister' ? 'bg-indigo-950 text-white shadow-md' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}">
+                      <span>💳 Student Fee Ledgers & Roster</span>
+                    </button>
+                    <button onclick="setFeeSubView('dailyRegister')" class="px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center space-x-2 active:scale-95 ${state.feeSubView === 'dailyRegister' ? 'bg-emerald-700 text-white shadow-md ring-2 ring-emerald-400/40' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}">
+                      <span>📅 Daily Collection Register & Statement</span>
+                      <span class="bg-amber-400 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-full uppercase ml-1 shadow-2xs">Live</span>
+                    </button>
                   </div>
 
-                  <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs border-collapse">
+                  <div class="flex items-center space-x-2 text-xs">
+                    ${state.feeSubView === 'dailyRegister' ? `
+                      <button onclick="exportDailyFeeCollectionExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-black shadow-xs flex items-center space-x-1.5 transition-all active:scale-95">
+                        <span>📥 Export Excel (.xlsx)</span>
+                      </button>
+                      <button onclick="openDailyFeeStatementModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-xl text-xs font-black shadow-xs flex items-center space-x-1.5 transition-all active:scale-95">
+                        <span>🖨️ Print Daily Statement</span>
+                      </button>
+                    ` : `
+                      <span class="text-xs text-slate-500 font-semibold bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+                        Total Enrolled: <strong class="text-indigo-900">${filteredStudents.length}</strong>
+                      </span>
+                    `}
+                  </div>
+                </div>
+
+                ${state.feeSubView === 'dailyRegister' ? `
+                  ${(() => {
+                    const allTxs = getAllFeeTransactions();
+                    const filteredTxs = getFilteredFeeTransactions();
+                    const totalAmt = filteredTxs.reduce((sum, t) => sum + t.amount, 0);
+                    let cashAmt = 0, upiAmt = 0, cashCount = 0, upiCount = 0;
+                    const uniqueStudents = new Set();
+
+                    filteredTxs.forEach(t => {
+                      uniqueStudents.add(t.studentId);
+                      const m = (t.mode || '').toLowerCase();
+                      if (m.includes('cash')) {
+                        cashAmt += t.amount;
+                        cashCount++;
+                      } else {
+                        upiAmt += t.amount;
+                        upiCount++;
+                      }
+                    });
+
+                    const curMode = state.feeFilterDateMode || 'today';
+                    const todayIso = getTodayIsoDate();
+                    const yesterdayIso = getYesterdayIsoDate();
+                    const curDate = state.feeFilterDate || todayIso;
+
+                    const dateRollup = getDailyCollectionRollup(allTxs);
+
+                    return `
+                      <div class="space-y-6">
+                        
+                        <!-- TOP BANNER & ACTION HEADER -->
+                        <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-5 sm:p-6 shadow-sm space-y-4 border border-indigo-700/50">
+                          <div class="flex flex-wrap justify-between items-center gap-4 border-b border-indigo-800/80 pb-4">
+                            <div>
+                              <div class="inline-flex items-center space-x-2 bg-emerald-400 text-slate-950 text-[10px] font-black px-3 py-0.5 rounded-full uppercase tracking-wider">
+                                <span>LIVE ACCOUNTS CASHBOOK</span>
+                              </div>
+                              <h2 class="text-xl sm:text-2xl font-black font-display tracking-tight text-white mt-1">
+                                📅 DAILY FEE COLLECTION REGISTER & CASHBOOK STATEMENT
+                              </h2>
+                              <p class="text-xs text-indigo-200">
+                                Real-time Date-wise Fee Auditing • Cash vs UPI Breakdown • Official School Accounts Register
+                              </p>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                              <button onclick="exportDailyFeeCollectionExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-black px-4 py-2 rounded-xl text-xs shadow-md transition-all flex items-center space-x-1.5 active:scale-95">
+                                <span>📥 Export Register (.xlsx)</span>
+                              </button>
+                              <button onclick="openDailyFeeStatementModal()" class="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-4 py-2 rounded-xl text-xs shadow-md transition-all flex items-center space-x-1.5 active:scale-95">
+                                <span>🖨️ Print Cashbook Statement</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          <!-- FILTER CONTROLLER TOOLBAR -->
+                          <div class="space-y-3 pt-1">
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+                              <!-- QUICK DATE PRESETS -->
+                              <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="text-xs font-bold text-indigo-300 mr-1">Date Filter:</span>
+                                <button onclick="setFeeDatePreset('today')" class="px-3 py-1.5 rounded-xl text-xs font-black transition-all ${curMode === 'today' ? 'bg-amber-400 text-slate-950 shadow-md font-extrabold' : 'bg-indigo-900/60 hover:bg-indigo-800 text-white'}">
+                                  🌟 Today (${formatDisplayDate(todayIso)})
+                                </button>
+                                <button onclick="setFeeDatePreset('yesterday')" class="px-3 py-1.5 rounded-xl text-xs font-black transition-all ${curMode === 'yesterday' ? 'bg-amber-400 text-slate-950 shadow-md font-extrabold' : 'bg-indigo-900/60 hover:bg-indigo-800 text-white'}">
+                                  ⏪ Yesterday (${formatDisplayDate(yesterdayIso)})
+                                </button>
+                                <button onclick="setFeeDatePreset('this_month')" class="px-3 py-1.5 rounded-xl text-xs font-black transition-all ${curMode === 'this_month' ? 'bg-amber-400 text-slate-950 shadow-md font-extrabold' : 'bg-indigo-900/60 hover:bg-indigo-800 text-white'}">
+                                  🗓️ This Month (Sept 2026)
+                                </button>
+                                <button onclick="setFeeDatePreset('all')" class="px-3 py-1.5 rounded-xl text-xs font-black transition-all ${curMode === 'all' ? 'bg-amber-400 text-slate-950 shadow-md font-extrabold' : 'bg-indigo-900/60 hover:bg-indigo-800 text-white'}">
+                                  📚 All Recorded Dates (${allTxs.length} Receipts)
+                                </button>
+                              </div>
+
+                              <!-- CUSTOM DATE PICKER -->
+                              <div class="flex items-center space-x-2">
+                                <label class="text-xs font-bold text-indigo-300">Custom Date:</label>
+                                <input type="date" value="${curDate}" max="${todayIso}" onchange="setFeeCustomDate(this.value)" class="bg-indigo-900/90 text-white border border-indigo-600 rounded-xl px-3 py-1 text-xs font-bold focus:ring-2 focus:ring-amber-400" />
+                              </div>
+                            </div>
+
+                            <!-- SECONDARY FILTERS: CLASS, MODE, SEARCH -->
+                            <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-2 text-xs">
+                              <div>
+                                <label class="block text-[11px] font-bold text-indigo-300 mb-1">Filter by Class:</label>
+                                <select onchange="setFeeFilterClass(this.value)" class="w-full bg-indigo-900/90 text-white border border-indigo-600 rounded-xl px-3 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-amber-400">
+                                  <option value="all" ${state.feeFilterClass === 'all' ? 'selected' : ''}>All Classes (School Wide)</option>
+                                  ${CLASS_LIST.map(c => `<option value="${c}" ${state.feeFilterClass === c ? 'selected' : ''}>${c}</option>`).join('')}
+                                </select>
+                              </div>
+
+                              <div>
+                                <label class="block text-[11px] font-bold text-indigo-300 mb-1">Payment Mode:</label>
+                                <select onchange="setFeeFilterMode(this.value)" class="w-full bg-indigo-900/90 text-white border border-indigo-600 rounded-xl px-3 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-amber-400">
+                                  <option value="all" ${state.feeFilterMode === 'all' ? 'selected' : ''}>All Payment Modes</option>
+                                  <option value="Cash" ${state.feeFilterMode === 'Cash' ? 'selected' : ''}>Cash Only</option>
+                                  <option value="UPI / Online Transfer" ${state.feeFilterMode === 'UPI / Online Transfer' ? 'selected' : ''}>UPI / Online Transfer</option>
+                                </select>
+                              </div>
+
+                              <div class="sm:col-span-2 flex items-end space-x-2">
+                                <div class="flex-1">
+                                  <label class="block text-[11px] font-bold text-indigo-300 mb-1">Search Transactions:</label>
+                                  <input type="text" placeholder="Search by student name, receipt no, admission no..." value="${state.feeFilterSearch || ''}" oninput="setFeeFilterSearch(this.value)" class="w-full bg-indigo-900/90 text-white placeholder-indigo-400/70 border border-indigo-600 rounded-xl px-3 py-1.5 text-xs font-medium focus:ring-2 focus:ring-amber-400" />
+                                </div>
+                                ${(state.feeFilterClass !== 'all' || state.feeFilterMode !== 'all' || state.feeFilterSearch || curMode !== 'today') ? `
+                                  <button onclick="resetFeeFilters()" class="bg-indigo-800 hover:bg-indigo-700 text-amber-300 border border-indigo-600 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0">
+                                    Reset
+                                  </button>
+                                ` : ''}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- LIVE KPI METRIC CARDS -->
+                        <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                          <div class="bg-white border border-emerald-200 rounded-2xl p-4 shadow-xs">
+                            <span class="text-xs font-bold text-emerald-800 uppercase tracking-wide">Total Fee Collected</span>
+                            <p class="text-2xl font-black text-emerald-600 font-display mt-1">₹${totalAmt.toLocaleString()}</p>
+                            <p class="text-[11px] text-slate-500 font-medium">Selected Filter Revenue</p>
+                          </div>
+
+                          <div class="bg-white border border-indigo-200 rounded-2xl p-4 shadow-xs">
+                            <span class="text-xs font-bold text-indigo-800 uppercase tracking-wide">UPI / Online Transfer</span>
+                            <p class="text-2xl font-black text-indigo-600 font-display mt-1">₹${upiAmt.toLocaleString()}</p>
+                            <p class="text-[11px] text-slate-500 font-medium">${upiCount} Online Receipts</p>
+                          </div>
+
+                          <div class="bg-white border border-amber-200 rounded-2xl p-4 shadow-xs">
+                            <span class="text-xs font-bold text-amber-800 uppercase tracking-wide">Cash Collections</span>
+                            <p class="text-2xl font-black text-amber-600 font-display mt-1">₹${cashAmt.toLocaleString()}</p>
+                            <p class="text-[11px] text-slate-500 font-medium">${cashCount} Cash Receipts</p>
+                          </div>
+
+                          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
+                            <span class="text-xs font-bold text-slate-700 uppercase tracking-wide">Receipts Issued</span>
+                            <p class="text-2xl font-black text-slate-800 font-display mt-1">${filteredTxs.length}</p>
+                            <p class="text-[11px] text-slate-500 font-medium">Transactions Count</p>
+                          </div>
+
+                          <div class="bg-white border border-purple-200 rounded-2xl p-4 shadow-xs col-span-2 sm:col-span-1">
+                            <span class="text-xs font-bold text-purple-800 uppercase tracking-wide">Students Paid</span>
+                            <p class="text-2xl font-black text-purple-600 font-display mt-1">${uniqueStudents.size}</p>
+                            <p class="text-[11px] text-slate-500 font-medium">Unique Students</p>
+                          </div>
+                        </div>
+
+                        <!-- DATE-WISE ROLLUP BREAKDOWN (WHEN MULTIPLE DATES ARE DISPLAYED) -->
+                        ${(curMode === 'all' || curMode === 'this_month' || dateRollup.length > 1) ? `
+                          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs space-y-3">
+                            <div class="flex justify-between items-center border-b pb-2">
+                              <div>
+                                <h3 class="text-sm font-black text-slate-900 uppercase tracking-wide">
+                                  📊 Date-wise Collection Summary (Daily Rollup)
+                                </h3>
+                                <p class="text-xs text-slate-500">Day-by-Day Financial Inflow Breakdown with Fast Filter Access</p>
+                              </div>
+                              <span class="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-200">
+                                ${dateRollup.length} Active Collection Dates
+                              </span>
+                            </div>
+
+                            <div class="overflow-x-auto">
+                              <table class="w-full text-left text-xs border-collapse">
+                                <thead>
+                                  <tr class="bg-slate-100 text-slate-700 font-bold uppercase text-[11px] border-b">
+                                    <th class="py-2.5 px-3">Date</th>
+                                    <th class="py-2.5 px-3 text-center">Receipts Count</th>
+                                    <th class="py-2.5 px-3 text-center">Students</th>
+                                    <th class="py-2.5 px-3 text-right">Cash Amount</th>
+                                    <th class="py-2.5 px-3 text-right">UPI / Online Amount</th>
+                                    <th class="py-2.5 px-3 text-right">Total Day Collection</th>
+                                    <th class="py-2.5 px-3 text-center">Action</th>
+                                  </tr>
+                                </thead>
+                                <tbody class="divide-y text-slate-800 font-medium">
+                                  ${dateRollup.map(day => `
+                                    <tr class="hover:bg-slate-50 transition-colors ${curDate === day.date && curMode === 'custom' ? 'bg-amber-50/70 font-bold border-l-4 border-l-amber-500' : ''}">
+                                      <td class="py-2.5 px-3 font-bold text-slate-900">
+                                        📅 ${formatDisplayDate(day.date)}
+                                      </td>
+                                      <td class="py-2.5 px-3 text-center font-bold text-slate-700">
+                                        ${day.count}
+                                      </td>
+                                      <td class="py-2.5 px-3 text-center text-slate-600">
+                                        ${day.studentsSet.size}
+                                      </td>
+                                      <td class="py-2.5 px-3 text-right font-mono font-bold text-amber-700">
+                                        ₹${day.cashTotal.toLocaleString()}
+                                      </td>
+                                      <td class="py-2.5 px-3 text-right font-mono font-bold text-indigo-700">
+                                        ₹${day.upiTotal.toLocaleString()}
+                                      </td>
+                                      <td class="py-2.5 px-3 text-right font-mono font-black text-emerald-700 text-sm">
+                                        ₹${day.grandTotal.toLocaleString()}
+                                      </td>
+                                      <td class="py-2.5 px-3 text-center">
+                                        <button onclick="setFeeCustomDate('${day.date}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 px-2.5 py-1 rounded-lg text-xs font-bold transition-all shadow-2xs">
+                                          🔍 View Day Receipts
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  `).join('')}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        ` : ''}
+
+                        <!-- ITEMIZED COLLECTION REGISTER TABLE -->
+                        <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                          <div class="p-4 border-b bg-slate-50 flex flex-wrap justify-between items-center gap-3">
+                            <div>
+                              <h3 class="text-base font-bold text-slate-900">
+                                🧾 Itemized Collection Register (${filteredTxs.length} Records)
+                              </h3>
+                              <p class="text-xs text-slate-500">
+                                Audited payment transactions matching current filter criteria • Click any receipt or student for full details
+                              </p>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                              <button onclick="openDailyFeeStatementModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold shadow-xs flex items-center space-x-1 transition-all">
+                                <span>🖨️ Print Statement</span>
+                              </button>
+                              <button onclick="exportDailyFeeCollectionExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold shadow-xs flex items-center space-x-1 transition-all">
+                                <span>📥 Export Excel</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                              <thead>
+                                <tr class="bg-slate-100 border-b text-slate-600 uppercase font-bold text-[11px]">
+                                  <th class="py-3 px-3 text-center">#</th>
+                                  <th class="py-3 px-3">Receipt No</th>
+                                  <th class="py-3 px-3">Payment Date</th>
+                                  <th class="py-3 px-3">Student Details</th>
+                                  <th class="py-3 px-3">Class & Section</th>
+                                  <th class="py-3 px-3">Fee Month / Head</th>
+                                  <th class="py-3 px-3">Payment Mode</th>
+                                  <th class="py-3 px-3 text-right">Amount Paid</th>
+                                  <th class="py-3 px-3 text-right">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody class="divide-y text-slate-800 font-medium">
+                                ${filteredTxs.length > 0 ? filteredTxs.map((t, idx) => `
+                                  <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="py-3 px-3 text-center font-bold text-slate-400">${idx + 1}</td>
+                                    <td class="py-3 px-3">
+                                      <button onclick="openReceiptModal('${t.studentId}', '${t.receiptNo}')" class="font-mono font-black text-indigo-900 hover:text-indigo-600 hover:underline flex items-center space-x-1 text-xs">
+                                        <span>🧾 ${t.receiptNo}</span>
+                                      </button>
+                                    </td>
+                                    <td class="py-3 px-3 font-semibold text-slate-700">
+                                      ${formatDisplayDate(t.date)}
+                                    </td>
+                                    <td class="py-3 px-3">
+                                      <div onclick="openStudentFeeLedgerModal('${t.studentId}')" class="cursor-pointer group">
+                                        <span class="font-extrabold text-slate-900 group-hover:text-indigo-600 group-hover:underline block">${t.studentName}</span>
+                                        <span class="text-[11px] text-slate-500 font-normal">Admn: #${t.admnNo} • Roll: #${t.rollNo}</span>
+                                      </div>
+                                    </td>
+                                    <td class="py-3 px-3 font-bold text-indigo-900">
+                                      ${t.grade} - Sec ${t.section}
+                                    </td>
+                                    <td class="py-3 px-3 font-medium text-slate-700">
+                                      ${t.month}
+                                    </td>
+                                    <td class="py-3 px-3">
+                                      <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${t.mode.toLowerCase().includes('cash') ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-indigo-100 text-indigo-900 border border-indigo-300'}">
+                                        ${t.mode.toLowerCase().includes('cash') ? '💵 Cash' : '📱 UPI / Online'}
+                                      </span>
+                                    </td>
+                                    <td class="py-3 px-3 text-right font-mono font-black text-emerald-700 text-sm">
+                                      ₹${t.amount.toLocaleString()}
+                                    </td>
+                                    <td class="py-3 px-3 text-right">
+                                      <div class="flex items-center justify-end space-x-1.5">
+                                        <button onclick="openReceiptModal('${t.studentId}', '${t.receiptNo}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 px-2 py-1 rounded-lg text-[11px] font-bold shadow-2xs">
+                                          🖨️ Receipt
+                                        </button>
+                                        <button onclick="openStudentFeeLedgerModal('${t.studentId}')" class="bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 px-2 py-1 rounded-lg text-[11px] font-bold shadow-2xs">
+                                          📜 Ledger
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                `).join('') : `
+                                  <tr>
+                                    <td colspan="9" class="py-12 text-center text-slate-500 space-y-3">
+                                      <div class="text-4xl">🧾</div>
+                                      <p class="font-extrabold text-base text-slate-700">No fee payment receipts found for the selected filter!</p>
+                                      <p class="text-xs text-slate-400 max-w-md mx-auto">
+                                        There are no payment records matching your current filter criteria. Try selecting <strong>Yesterday</strong> (568 receipts), <strong>This Month</strong> (831 receipts), or <strong>All Recorded Dates</strong>.
+                                      </p>
+                                      <div class="pt-2 flex justify-center items-center space-x-2">
+                                        <button onclick="setFeeDatePreset('yesterday')" class="bg-amber-400 hover:bg-amber-300 text-slate-950 px-4 py-2 rounded-xl text-xs font-black shadow-sm">
+                                          View Yesterday (${formatDisplayDate(yesterdayIso)})
+                                        </button>
+                                        <button onclick="setFeeDatePreset('this_month')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm">
+                                          View September 2026
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                `}
+                              </tbody>
+                              ${filteredTxs.length > 0 ? `
+                                <tfoot class="bg-slate-100 border-t-2 border-slate-300 font-extrabold text-slate-900">
+                                  <tr>
+                                    <td colspan="7" class="py-3 px-3 text-right uppercase text-xs">Total Collection Amount (${filteredTxs.length} Receipts):</td>
+                                    <td class="py-3 px-3 text-right font-mono font-black text-emerald-800 text-base">₹${totalAmt.toLocaleString()}</td>
+                                    <td></td>
+                                  </tr>
+                                </tfoot>
+                              ` : ''}
+                            </table>
+                          </div>
+                        </div>
+
+                      </div>
+                    `;
+                  })()}
+                ` : `
+                  <!-- OFFICIAL SCHOOL FEE STRUCTURE REFERENCE TABLE CARD -->
+                  <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-5 shadow-sm space-y-4 border border-amber-400/40">
+                    <div class="flex flex-wrap justify-between items-center gap-3 border-b border-indigo-800/80 pb-3">
+                      <div>
+                        <div class="inline-flex items-center space-x-2 bg-amber-400 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                          <span>ST. VENUS HIGH SCHOOL</span>
+                        </div>
+                        <h3 class="text-lg font-black font-display tracking-tight text-white mt-1">FEE STRUCTURE FOR THE ACADEMIC YEAR – 2026 – 2027</h3>
+                        <p class="text-xs text-indigo-200">Official Class-wise Fee Schedule (Monthly Fee, Yearly Exam Fee & Total Yearly Package)</p>
+                      </div>
+                      ${state.currentUser && state.currentUser.role === 'super_admin' ? `
+                        <button onclick="openEditFeeStructureModal()" class="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-4 py-2 rounded-xl text-xs shadow-md transition-all">
+                          ⚙️ Edit Official Fee Rates (Super Admin)
+                        </button>
+                      ` : ''}
+                    </div>
+
+                    <div class="overflow-x-auto">
+                      <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr class="bg-indigo-900/80 text-amber-300 font-extrabold uppercase tracking-wider text-[11px] border-b border-indigo-700">
+                            <th class="py-2.5 px-3">CLASS</th>
+                            <th class="py-2.5 px-3 text-right">MONTHLY FEE</th>
+                            <th class="py-2.5 px-3 text-right">YEARLY EXAM FEE</th>
+                            <th class="py-2.5 px-3 text-right">YEARLY FEE PACKAGE</th>
+                            <th class="py-2.5 px-3 text-center">EXAM FEE SCHEDULE</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-indigo-800/50 text-slate-100 font-medium">
+                          ${Object.keys(state.classFeeStructure || DEFAULT_CLASS_FEE_STRUCTURE).map(clsKey => {
+                            const item = (state.classFeeStructure || DEFAULT_CLASS_FEE_STRUCTURE)[clsKey];
+                            return `
+                              <tr class="hover:bg-indigo-900/40 transition-colors">
+                                <td class="py-2 px-3 font-extrabold text-amber-200 font-display">${clsKey.toUpperCase()}</td>
+                                <td class="py-2 px-3 text-right font-mono font-bold text-emerald-400">₹${item.monthlyFee.toLocaleString()}</td>
+                                <td class="py-2 px-3 text-right font-mono font-bold text-sky-300">₹${item.yearlyExamFee.toLocaleString()}</td>
+                                <td class="py-2 px-3 text-right font-mono font-black text-amber-400 text-sm">₹${item.yearlyFee.toLocaleString()}</td>
+                                <td class="py-2 px-3 text-center text-[10px] text-indigo-300 font-semibold">
+                                  ${['Nursery', 'LKG', 'UKG', '1st', '2nd', '3rd', '4th', '5th'].includes(clsKey) ? '₹1,100 Exam Fee' : (clsKey === '10th' ? '₹2,500 Exam Fee' : '₹1,200 Exam Fee')}
+                                </td>
+                              </tr>
+                            `;
+                          }).join('')}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                    <div class="p-4 border-b bg-slate-50 flex justify-between items-center">
+                      <div>
+                        <h3 class="text-base font-bold text-slate-900">💳 Student Fee Ledger & Installments Tracker (10 Monthly Installments)</h3>
+                        <p class="text-xs text-slate-500">Live Breakdown of Total Annual Fee, Payments, Balance, and Monthly Tuition Arrears</p>
+                      </div>
+                      <div class="flex items-center space-x-2">
+                        <button onclick="presetBroadcastCategory('fee')" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1 rounded-xl text-xs font-bold shadow-xs flex items-center space-x-1">
+                          <span>📢 Broadcast Fee Reminders to Parents</span>
+                        </button>
+                        <span class="bg-indigo-100 text-indigo-900 px-3 py-1 rounded-full text-xs font-bold">10 Installments Engine</span>
+                      </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
                       <thead>
-                        <tr class="bg-indigo-900/80 text-amber-300 font-extrabold uppercase tracking-wider text-[11px] border-b border-indigo-700">
-                          <th class="py-2.5 px-3">CLASS</th>
-                          <th class="py-2.5 px-3 text-right">MONTHLY FEE</th>
-                          <th class="py-2.5 px-3 text-right">YEARLY EXAM FEE</th>
-                          <th class="py-2.5 px-3 text-right">YEARLY FEE PACKAGE</th>
-                          <th class="py-2.5 px-3 text-center">EXAM FEE SCHEDULE</th>
+                        <tr class="bg-slate-100 border-b text-slate-600 uppercase font-bold">
+                          <th class="py-3 px-3">Student & Class</th>
+                          <th class="py-3 px-3 text-right">Class Rate</th>
+                          <th class="py-3 px-3 text-right">Grand Total Fee</th>
+                          <th class="py-3 px-3 text-right">Total Paid</th>
+                          <th class="py-3 px-3 text-right">Balance Due</th>
+                          <th class="py-3 px-3 text-right text-rose-700">Monthly Arrears</th>
+                          <th class="py-3 px-3 text-center">Paid Installments</th>
+                          <th class="py-3 px-3 text-right">Actions</th>
                         </tr>
                       </thead>
-                      <tbody class="divide-y divide-indigo-800/50 text-slate-100 font-medium">
-                        ${Object.keys(state.classFeeStructure || DEFAULT_CLASS_FEE_STRUCTURE).map(clsKey => {
-                          const item = (state.classFeeStructure || DEFAULT_CLASS_FEE_STRUCTURE)[clsKey];
+                      <tbody class="divide-y text-slate-800 font-medium">
+                        ${filteredStudents.map(s => {
+                          const feeCalc = getStudentFeeTotals(s);
                           return `
-                            <tr class="hover:bg-indigo-900/40 transition-colors">
-                              <td class="py-2 px-3 font-extrabold text-amber-200 font-display">${clsKey.toUpperCase()}</td>
-                              <td class="py-2 px-3 text-right font-mono font-bold text-emerald-400">₹${item.monthlyFee.toLocaleString()}</td>
-                              <td class="py-2 px-3 text-right font-mono font-bold text-sky-300">₹${item.yearlyExamFee.toLocaleString()}</td>
-                              <td class="py-2 px-3 text-right font-mono font-black text-amber-400 text-sm">₹${item.yearlyFee.toLocaleString()}</td>
-                              <td class="py-2 px-3 text-center text-[10px] text-indigo-300 font-semibold">
-                                ${['Nursery', 'LKG', 'UKG', '1st', '2nd', '3rd', '4th', '5th'].includes(clsKey) ? '₹1,100 Exam Fee' : (clsKey === '10th' ? '₹2,500 Exam Fee' : '₹1,200 Exam Fee')}
+                            <tr class="hover:bg-slate-50">
+                              <td onclick="openStudentFeeLedgerModal('${s.id}')" class="py-3.5 px-3 font-bold text-indigo-700 cursor-pointer hover:underline group">
+                                <span class="group-hover:underline text-slate-900 font-extrabold">${s.name}</span>
+                                <span class="text-[10px] text-indigo-600 font-bold ml-1">🔍 (Full Details)</span>
+                                <div class="text-[11px] text-indigo-600 font-medium">
+                                  ${s.grade} - Sec ${s.section}
+                                  ${feeCalc.isBus ? `<span class="bg-indigo-100 text-indigo-900 border border-indigo-300 px-1.5 py-0.5 rounded text-[10px] font-bold ml-1">🚌 Bus ₹${feeCalc.monthlyBusFee}/mo</span>` : '<span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px] font-bold ml-1">🚲 Own</span>'}
+                                </div>
+                              </td>
+                              <td class="py-3.5 px-3 text-right font-bold text-indigo-900">₹${feeCalc.monthlyRate.toLocaleString()}/mo ${feeCalc.isBus ? `<div class="text-[10px] text-indigo-700">+₹${feeCalc.monthlyBusFee} Bus</div>` : ''}</td>
+                              <td class="py-3.5 px-3 text-right font-bold text-slate-900">
+                                ₹${feeCalc.grandTotalFee.toLocaleString()}
+                                ${feeCalc.concession > 0 ? `<div class="text-[10px] text-emerald-700 font-extrabold tracking-tight">(-₹${feeCalc.concession.toLocaleString()} Disc)</div>` : ''}
+                              </td>
+                              <td class="py-3.5 px-3 text-right font-bold text-emerald-700">₹${feeCalc.totalPaidFee.toLocaleString()}</td>
+                              <td class="py-3.5 px-3 text-right font-bold text-rose-600">₹${feeCalc.balanceDue.toLocaleString()}</td>
+                              <td class="py-3.5 px-3 text-right font-bold ${feeCalc.arrears > 0 ? 'text-rose-700 bg-rose-50 px-2 rounded-lg' : 'text-emerald-700'}">₹${feeCalc.arrears.toLocaleString()}</td>
+                              <td class="py-3.5 px-3 text-center"><span class="bg-indigo-50 text-indigo-800 border border-indigo-200 px-2.5 py-1 rounded-lg font-bold">${feeCalc.paidMonthsCount} / 11 Mos</span></td>
+                              <td class="py-3.5 px-3 text-right">
+                                <div class="flex items-center justify-end space-x-1.5">
+                                  <button onclick="openStudentFeeLedgerModal('${s.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-xl font-bold shadow-xs flex items-center space-x-1">
+                                    <span>📜 Statement / Ledger</span>
+                                  </button>
+                                  <button onclick="openPayFeeModal('${s.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl font-bold shadow-xs flex items-center space-x-1">
+                                    <span>+ Pay Fee</span>
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           `;
@@ -4653,73 +5393,7 @@
                       </tbody>
                     </table>
                   </div>
-                </div>
-
-                <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                  <div class="p-4 border-b bg-slate-50 flex justify-between items-center">
-                    <div>
-                      <h3 class="text-base font-bold text-slate-900">💳 Student Fee Ledger & Installments Tracker (10 Monthly Installments)</h3>
-                      <p class="text-xs text-slate-500">Live Breakdown of Total Annual Fee, Payments, Balance, and Monthly Tuition Arrears</p>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                      <button onclick="presetBroadcastCategory('fee')" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1 rounded-xl text-xs font-bold shadow-xs flex items-center space-x-1">
-                        <span>📢 Broadcast Fee Reminders to Parents</span>
-                      </button>
-                      <span class="bg-indigo-100 text-indigo-900 px-3 py-1 rounded-full text-xs font-bold">10 Installments Engine</span>
-                    </div>
-                  </div>
-                  <div class="overflow-x-auto">
-                  <table class="w-full text-left text-xs">
-                    <thead>
-                      <tr class="bg-slate-100 border-b text-slate-600 uppercase font-bold">
-                        <th class="py-3 px-3">Student & Class</th>
-                        <th class="py-3 px-3 text-right">Class Rate</th>
-                        <th class="py-3 px-3 text-right">Grand Total Fee</th>
-                        <th class="py-3 px-3 text-right">Total Paid</th>
-                        <th class="py-3 px-3 text-right">Balance Due</th>
-                        <th class="py-3 px-3 text-right text-rose-700">Monthly Arrears</th>
-                        <th class="py-3 px-3 text-center">Paid Installments</th>
-                        <th class="py-3 px-3 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody class="divide-y text-slate-800 font-medium">
-                      ${filteredStudents.map(s => {
-                        const feeCalc = getStudentFeeTotals(s);
-                        return `
-                          <tr class="hover:bg-slate-50">
-                            <td onclick="openStudentFeeLedgerModal('${s.id}')" class="py-3.5 px-3 font-bold text-indigo-700 cursor-pointer hover:underline group">
-                              <span class="group-hover:underline text-slate-900 font-extrabold">${s.name}</span>
-                              <span class="text-[10px] text-indigo-600 font-bold ml-1">🔍 (Full Details)</span>
-                              <div class="text-[11px] text-indigo-600 font-medium">
-                                ${s.grade} - Sec ${s.section}
-                                ${feeCalc.isBus ? `<span class="bg-indigo-100 text-indigo-900 border border-indigo-300 px-1.5 py-0.5 rounded text-[10px] font-bold ml-1">🚌 Bus ₹${feeCalc.monthlyBusFee}/mo</span>` : '<span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px] font-bold ml-1">🚲 Own</span>'}
-                              </div>
-                            </td>
-                            <td class="py-3.5 px-3 text-right font-bold text-indigo-900">₹${feeCalc.monthlyRate.toLocaleString()}/mo ${feeCalc.isBus ? `<div class="text-[10px] text-indigo-700">+₹${feeCalc.monthlyBusFee} Bus</div>` : ''}</td>
-                            <td class="py-3.5 px-3 text-right font-bold text-slate-900">
-                              ₹${feeCalc.grandTotalFee.toLocaleString()}
-                              ${feeCalc.concession > 0 ? `<div class="text-[10px] text-emerald-700 font-extrabold tracking-tight">(-₹${feeCalc.concession.toLocaleString()} Disc)</div>` : ''}
-                            </td>
-                            <td class="py-3.5 px-3 text-right font-bold text-emerald-700">₹${feeCalc.totalPaidFee.toLocaleString()}</td>
-                            <td class="py-3.5 px-3 text-right font-bold text-rose-600">₹${feeCalc.balanceDue.toLocaleString()}</td>
-                            <td class="py-3.5 px-3 text-right font-bold ${feeCalc.arrears > 0 ? 'text-rose-700 bg-rose-50 px-2 rounded-lg' : 'text-emerald-700'}">₹${feeCalc.arrears.toLocaleString()}</td>
-                            <td class="py-3.5 px-3 text-center"><span class="bg-indigo-50 text-indigo-800 border border-indigo-200 px-2.5 py-1 rounded-lg font-bold">${feeCalc.paidMonthsCount} / 11 Mos</span></td>
-                            <td class="py-3.5 px-3 text-right">
-                              <div class="flex items-center justify-end space-x-1.5">
-                                <button onclick="openStudentFeeLedgerModal('${s.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-xl font-bold shadow-xs flex items-center space-x-1">
-                                  <span>📜 Statement / Ledger</span>
-                                </button>
-                                <button onclick="openPayFeeModal('${s.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl font-bold shadow-xs flex items-center space-x-1">
-                                  <span>+ Pay Fee</span>
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        `;
-                      }).join('')}
-                    </tbody>
-                  </table>
-                </div>
+                `}
               </div>
             ` : ''}
 
@@ -7090,6 +7764,166 @@
                 <div class="flex space-x-2">
                   <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-md">🖨️ Print Receipt</button>
                   <button onclick="closeModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold">✕ Close</button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        `;
+      }
+
+      // MODAL: PRINT OFFICIAL DAILY FEE COLLECTION STATEMENT / CASHBOOK
+      if (state.activeModal === 'printDailyStatement') {
+        const filtered = getFilteredFeeTransactions();
+        const totalAmt = filtered.reduce((s, t) => s + t.amount, 0);
+        let cashTotal = 0, upiTotal = 0, cashCount = 0, upiCount = 0;
+        const uniqueStudents = new Set();
+        filtered.forEach(t => {
+          uniqueStudents.add(t.studentId);
+          const m = (t.mode || '').toLowerCase();
+          if (m.includes('cash')) {
+            cashTotal += t.amount;
+            cashCount++;
+          } else {
+            upiTotal += t.amount;
+            upiCount++;
+          }
+        });
+
+        const periodLabel = state.feeFilterDateMode === 'today' ? `Date: ${formatDisplayDate(getTodayIsoDate())}` :
+          (state.feeFilterDateMode === 'yesterday' ? `Date: ${formatDisplayDate(getYesterdayIsoDate())}` :
+          (state.feeFilterDateMode === 'this_month' ? `Month: September 2026` :
+          (state.feeFilterDateMode === 'all' ? `All Dates (Academic Year ${state.activeAcademicYear || '2026–2027'})` : `Date: ${formatDisplayDate(state.feeFilterDate)}`)));
+
+        return `
+          <div class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+            <div class="bg-white text-slate-900 rounded-3xl max-w-4xl w-full p-6 md:p-8 space-y-5 shadow-2xl relative" id="print-area">
+              
+              <div class="no-print flex justify-between items-center border-b pb-3">
+                <div class="flex items-center space-x-2">
+                  <span class="bg-emerald-100 text-emerald-900 text-xs font-black px-2.5 py-1 rounded-full uppercase">Printable Statement</span>
+                  <span class="text-xs font-bold text-slate-500">Official Daily Fee Collection Cashbook Register</span>
+                </div>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-700 font-black text-base">✕</button>
+              </div>
+
+              <!-- OFFICIAL SCHOOL HEADER -->
+              <div class="text-center font-display border-b-2 border-indigo-950 pb-3 space-y-1">
+                <div class="inline-flex items-center space-x-2 bg-amber-400 text-slate-950 text-[10px] font-black px-3 py-0.5 rounded-full uppercase tracking-wider">
+                  <span>Recognised by Govt. of Telangana</span>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-black text-indigo-950 uppercase tracking-tight">ST. VENUS HIGH SCHOOL</h2>
+                <p class="text-xs font-semibold text-slate-600">New Ramnagar Colony, Chilkanagar, Uppal, Hyderabad - 500039 • Phone: 9121833702</p>
+                <div class="pt-1">
+                  <h3 class="text-sm font-black text-indigo-900 uppercase tracking-wide bg-indigo-50 border border-indigo-200 py-1 px-4 rounded-xl inline-block">
+                    DAILY FEE COLLECTION STATEMENT & CASHBOOK REGISTER
+                  </h3>
+                </div>
+              </div>
+
+              <!-- REPORT META BAR -->
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-bold bg-slate-50 p-3 rounded-2xl border border-slate-200">
+                <div>Report Period: <strong class="text-indigo-900 block text-xs">${periodLabel}</strong></div>
+                <div>Academic Year: <strong class="text-slate-900 block text-xs">${state.activeAcademicYear || '2026–2027'}</strong></div>
+                <div>Generated By: <strong class="text-slate-900 block text-xs">${state.currentUser?.fullName || 'Administrator'}</strong></div>
+                <div>Printed On: <strong class="text-slate-900 block text-xs">${new Date().toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</strong></div>
+              </div>
+
+              <!-- EXECUTIVE SUMMARY KPI BOXES -->
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center text-xs font-bold">
+                <div class="bg-emerald-50 border border-emerald-300 p-3 rounded-2xl">
+                  <span class="text-emerald-800 text-[10px] uppercase">Grand Total Collected</span>
+                  <p class="text-xl font-black text-emerald-700 font-display mt-0.5">₹${totalAmt.toLocaleString()}</p>
+                  <p class="text-[10px] text-emerald-800">${filtered.length} Receipts Issued</p>
+                </div>
+                <div class="bg-indigo-50 border border-indigo-300 p-3 rounded-2xl">
+                  <span class="text-indigo-800 text-[10px] uppercase">UPI / Online Transfer</span>
+                  <p class="text-xl font-black text-indigo-900 font-display mt-0.5">₹${upiTotal.toLocaleString()}</p>
+                  <p class="text-[10px] text-indigo-700">${upiCount} Online Receipts</p>
+                </div>
+                <div class="bg-amber-50 border border-amber-300 p-3 rounded-2xl">
+                  <span class="text-amber-900 text-[10px] uppercase">Cash Collection</span>
+                  <p class="text-xl font-black text-amber-900 font-display mt-0.5">₹${cashTotal.toLocaleString()}</p>
+                  <p class="text-[10px] text-amber-800">${cashCount} Cash Receipts</p>
+                </div>
+                <div class="bg-purple-50 border border-purple-300 p-3 rounded-2xl">
+                  <span class="text-purple-900 text-[10px] uppercase">Students Count</span>
+                  <p class="text-xl font-black text-purple-900 font-display mt-0.5">${uniqueStudents.size}</p>
+                  <p class="text-[10px] text-purple-700">Unique Students Paid</p>
+                </div>
+              </div>
+
+              <!-- ITEMIZED TRANSACTION TABLE -->
+              <div class="border rounded-2xl overflow-hidden text-xs">
+                <table class="w-full text-left border-collapse">
+                  <thead class="bg-slate-100 font-extrabold text-slate-700 border-b uppercase text-[10px]">
+                    <tr>
+                      <th class="p-2 text-center">#</th>
+                      <th class="p-2">Receipt No</th>
+                      <th class="p-2">Date</th>
+                      <th class="p-2">Student Name</th>
+                      <th class="p-2">Class & Sec</th>
+                      <th class="p-2">Fee Month / Head</th>
+                      <th class="p-2">Mode</th>
+                      <th class="p-2 text-right">Amount Paid</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y font-semibold text-slate-800 text-xs">
+                    ${filtered.map((t, idx) => `
+                      <tr class="hover:bg-slate-50">
+                        <td class="p-2 text-center font-bold text-slate-500">${idx + 1}</td>
+                        <td class="p-2 font-mono font-black text-indigo-950">${t.receiptNo}</td>
+                        <td class="p-2 font-medium text-slate-700">${t.date}</td>
+                        <td class="p-2 font-bold text-slate-900">
+                          ${t.studentName}
+                          <span class="text-[10px] text-slate-500 block font-normal">Admn: #${t.admnNo}</span>
+                        </td>
+                        <td class="p-2 font-bold text-indigo-900">${t.grade} - ${t.section}</td>
+                        <td class="p-2 text-slate-700">${t.month}</td>
+                        <td class="p-2">
+                          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${t.mode.toLowerCase().includes('cash') ? 'bg-amber-100 text-amber-900' : 'bg-indigo-100 text-indigo-900'}">${t.mode}</span>
+                        </td>
+                        <td class="p-2 text-right font-black text-emerald-700 text-xs">₹${t.amount.toLocaleString()}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                  <tfoot class="bg-slate-100 border-t-2 border-slate-300 font-black text-slate-900">
+                    <tr>
+                      <td colspan="7" class="p-2.5 text-right uppercase text-xs">Grand Total Collection:</td>
+                      <td class="p-2.5 text-right text-emerald-800 text-sm">₹${totalAmt.toLocaleString()}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              <!-- OFFICIAL SIGNATURES -->
+              <div class="pt-6 grid grid-cols-3 gap-6 text-center text-xs font-bold text-slate-700 border-t">
+                <div>
+                  <div class="h-10"></div>
+                  <p class="border-t border-slate-400 pt-1 text-[11px]">Prepared / Cashier Sign</p>
+                </div>
+                <div>
+                  <div class="h-10"></div>
+                  <p class="border-t border-slate-400 pt-1 text-[11px]">Accounts In-charge Sign</p>
+                </div>
+                <div>
+                  <div class="h-10"></div>
+                  <p class="border-t border-slate-400 pt-1 text-[11px]">Principal / Correspondent Sign</p>
+                </div>
+              </div>
+
+              <!-- ACTION BUTTONS (NO-PRINT) -->
+              <div class="no-print pt-4 border-t border-slate-200 flex flex-wrap justify-between items-center gap-3">
+                <button onclick="closeModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold transition-all">
+                  ✕ Close
+                </button>
+                <div class="flex items-center space-x-2">
+                  <button onclick="exportDailyFeeCollectionExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-black shadow-md flex items-center space-x-1.5 transition-all">
+                    <span>📥 Export to Excel (.xlsx)</span>
+                  </button>
+                  <button onclick="window.print()" class="bg-indigo-900 hover:bg-black text-white px-5 py-2.5 rounded-xl text-xs font-black shadow-md flex items-center space-x-1.5 transition-all">
+                    <span>🖨️ Print Cashbook Statement</span>
+                  </button>
                 </div>
               </div>
 
