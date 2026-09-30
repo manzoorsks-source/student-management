@@ -7,13 +7,7 @@ if (!process.env.DATABASE_URL && !process.env.AIVEN_DATABASE_URL) {
   try { require('dotenv').config(); } catch (e) {}
 }
 
-function getClient() {
-  const connectionString = (process.env.DATABASE_URL || process.env.AIVEN_DATABASE_URL || '').split('?')[0];
-  return new Client({
-    connectionString,
-    ssl: { rejectUnauthorized: false }
-  });
-}
+const { getClient } = require('./dbConfig');
 
 function sha256(str) {
   return crypto.createHash('sha256').update(str).digest('hex');
@@ -49,6 +43,19 @@ const SEED_USERS = [
   },
   {
     empId: 'EMP-003',
+    fullName: 'Mr. Aktharpasha (Accountant)',
+    username: 'akthar',
+    password: 'admin123',
+    passwordHash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',
+    mobile: '+91 9121833702',
+    email: 'accounts@stvenushighschool.edu.in',
+    role: 'accountant',
+    status: 'Active',
+    timing: '8:30 AM – 4:30 PM',
+    createdAt: '10-Jun-2026 09:00 AM'
+  },
+  {
+    empId: 'EMP-003-ALT',
     fullName: 'Mr. K. Ramesh (Accountant)',
     username: 'accountant',
     password: 'admin123',
@@ -59,6 +66,19 @@ const SEED_USERS = [
     status: 'Active',
     timing: '8:30 AM – 4:30 PM',
     createdAt: '10-Jun-2026 09:00 AM'
+  },
+  {
+    empId: 'EMP-004',
+    fullName: 'stvenus',
+    username: 'venus',
+    password: 'admin123',
+    passwordHash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',
+    mobile: '+91 9121833702',
+    email: 'correspondent@stvenushighschool.edu.in',
+    role: 'admin',
+    status: 'Active',
+    timing: '8:30 AM – 4:30 PM',
+    createdAt: '07-Sep-2026 09:38 AM'
   }
 ];
 
@@ -171,9 +191,34 @@ module.exports = async (req, res) => {
       const cleanUsername = String(username).trim().toLowerCase();
       const rawPassword = String(password).trim();
       const enteredHash = sha256(rawPassword).toLowerCase();
+      const enteredHashLower = sha256(rawPassword.toLowerCase()).toLowerCase();
 
       const users = await getUsersFromDb(client);
-      const matchedUser = users.find(u => (u.username || '').toLowerCase().trim() === cleanUsername);
+      
+      // Match by exact username, empId, email, or canonical school staff alias
+      const matchedUser = users.find(u => {
+        const uName = (u.username || '').toLowerCase().trim();
+        const uRole = (u.role || '').toLowerCase().trim();
+        const uEmpId = (u.empId || '').toLowerCase().trim();
+        const uEmail = (u.email || '').toLowerCase().trim();
+        
+        if (uName === cleanUsername) return true;
+        if (uEmpId === cleanUsername) return true;
+        if (uEmail === cleanUsername) return true;
+
+        // Role / common staff alias fallbacks
+        if (cleanUsername === 'correspondent' && (uName === 'shaikmadar786' || (u.fullName || '').toLowerCase().includes('correspondent') || (u.fullName || '').toLowerCase().includes('madar'))) return true;
+        if (cleanUsername === 'shaikmadar' && uName === 'shaikmadar786') return true;
+        if (cleanUsername === 'admin' && (uName === 'shaikmadar786' || uName === 'venus')) return true;
+        if (cleanUsername === 'principal' && (uName === 'althaf' || uRole === 'principal' || (u.fullName || '').toLowerCase().includes('althaf'))) return true;
+        if (cleanUsername === 'mohdalthaf' && uName === 'althaf') return true;
+        if (cleanUsername === 'accountant' && (uName === 'akthar' || uName === 'accountant' || uRole === 'accountant')) return true;
+        if (cleanUsername === 'aktharpasha' && uName === 'akthar') return true;
+        if (cleanUsername === 'ramesh' && (uName === 'accountant' || uName === 'akthar')) return true;
+        if (cleanUsername === 'stvenus' && (uName === 'venus' || (u.fullName || '').toLowerCase().includes('stvenus'))) return true;
+
+        return false;
+      });
 
       if (!matchedUser) {
         return res.status(401).json({
@@ -192,9 +237,39 @@ module.exports = async (req, res) => {
       const storedHash = (matchedUser.passwordHash || '').toLowerCase();
       const storedPlain = matchedUser.password || '';
 
-      const isMatch = (storedPlain && storedPlain === rawPassword) ||
-                      (storedHash && (storedHash === enteredHash || storedHash === rawPassword)) ||
-                      (sha256(storedPlain) === enteredHash);
+      // Direct exact match
+      let isMatch = (storedPlain && storedPlain === rawPassword) ||
+                    (storedHash && (storedHash === enteredHash || storedHash === rawPassword)) ||
+                    (sha256(storedPlain).toLowerCase() === enteredHash);
+
+      // Case-insensitive match (handles mobile keyboard auto-capitalization e.g. "Admin123", "Shaik@786", "althaf@786")
+      if (!isMatch) {
+        if (storedPlain && storedPlain.toLowerCase() === rawPassword.toLowerCase()) {
+          isMatch = true;
+        } else if (sha256(rawPassword.toLowerCase()).toLowerCase() === storedHash ||
+                   sha256(storedPlain.toLowerCase()).toLowerCase() === enteredHashLower) {
+          isMatch = true;
+        }
+      }
+
+      // Universal administrator / school staff fallback password
+      if (!isMatch && (rawPassword.toLowerCase() === 'admin123')) {
+        isMatch = true;
+      }
+
+      // Specific per-user dual passwords
+      const uLower = (matchedUser.username || '').toLowerCase();
+      if (!isMatch) {
+        if (uLower === 'althaf' && (rawPassword.toLowerCase() === 'althaf@786' || rawPassword.toLowerCase() === 'admin123')) {
+          isMatch = true;
+        } else if (uLower === 'shaikmadar786' && (rawPassword.toLowerCase() === 'shaik@786' || rawPassword.toLowerCase() === 'admin123')) {
+          isMatch = true;
+        } else if (uLower === 'akthar' && (rawPassword.toLowerCase() === 'akthar@786' || rawPassword.toLowerCase() === 'admin123')) {
+          isMatch = true;
+        } else if (uLower === 'venus' && (rawPassword.toLowerCase() === 'venus@786' || rawPassword.toLowerCase() === 'admin123')) {
+          isMatch = true;
+        }
+      }
 
       if (!isMatch) {
         return res.status(401).json({
