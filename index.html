@@ -619,6 +619,81 @@
       return { entered: true, isAbsent: false, mark: num, text: num.toString() };
     }
 
+    function getStudentTermSubjectMark(studentOrMarksData, termNameOrSubject, optionalSubject) {
+      let tData = {};
+      let targetSubject = '';
+      if (optionalSubject !== undefined) {
+        const student = studentOrMarksData;
+        const examKey = termNameOrSubject;
+        targetSubject = optionalSubject;
+        tData = (typeof findExamData === 'function' ? findExamData(student, examKey) : (student?.termMarks?.[examKey])) || {};
+      } else {
+        tData = studentOrMarksData || {};
+        targetSubject = termNameOrSubject;
+      }
+      if (!tData || typeof tData !== 'object' || !targetSubject) return '';
+
+      // 1. Direct exact match
+      if (tData[targetSubject] !== undefined && tData[targetSubject] !== null && tData[targetSubject] !== '' && tData[targetSubject] !== 'NA') {
+        return tData[targetSubject];
+      }
+
+      // 2. Normalized key match (case-insensitive, ignore spaces, hyphens, underscores, dots)
+      const normTarget = targetSubject.toLowerCase().replace(/[\s\-_().]/g, '');
+      for (const k in tData) {
+        if (k === '_rwps' || k === 'teacherRemarks') continue;
+        const normK = k.toLowerCase().replace(/[\s\-_().]/g, '');
+        if (normK === normTarget) {
+          const v = tData[k];
+          if (v !== undefined && v !== null && v !== '' && v !== 'NA') return v;
+        }
+      }
+
+      // 3. Educational aliases & subject fallbacks
+      for (const k in tData) {
+        if (k === '_rwps' || k === 'teacherRemarks') continue;
+        const cleanK = k.toLowerCase().replace(/[\s\-_().]/g, '');
+        if ((normTarget.includes('physical') || normTarget === 'ps') && (cleanK.includes('physical') || cleanK === 'ps')) {
+          const v = tData[k];
+          if (v !== undefined && v !== null && v !== '' && v !== 'NA') return v;
+        }
+        if ((normTarget.includes('bio') || normTarget === 'bs') && (cleanK.includes('bio') || cleanK === 'bs')) {
+          const v = tData[k];
+          if (v !== undefined && v !== null && v !== '' && v !== 'NA') return v;
+        }
+        if ((normTarget.includes('math') || normTarget.includes('maths')) && cleanK.includes('math')) {
+          const v = tData[k];
+          if (v !== undefined && v !== null && v !== '' && v !== 'NA') return v;
+        }
+        if ((normTarget.includes('generalenglish') || normTarget === 'geneng') && (cleanK.includes('generalenglish') || cleanK === 'geneng')) {
+          const v = tData[k];
+          if (v !== undefined && v !== null && v !== '' && v !== 'NA') return v;
+        }
+        if ((normTarget.includes('science') || normTarget === 'evs') && (cleanK.includes('science') || cleanK === 'evs')) {
+          const v = tData[k];
+          if (v !== undefined && v !== null && v !== '' && v !== 'NA') return v;
+        }
+        if (normTarget.includes('telugu') && cleanK.includes('telugu')) {
+          const v = tData[k];
+          if (v !== undefined && v !== null && v !== '' && v !== 'NA') return v;
+        }
+        if (normTarget.includes('hindi') && cleanK.includes('hindi')) {
+          const v = tData[k];
+          if (v !== undefined && v !== null && v !== '' && v !== 'NA') return v;
+        }
+        if (normTarget.includes('english') && cleanK.includes('english') && !normTarget.includes('general') && !cleanK.includes('general')) {
+          const v = tData[k];
+          if (v !== undefined && v !== null && v !== '' && v !== 'NA') return v;
+        }
+        if (normTarget.includes('social') && cleanK.includes('social')) {
+          const v = tData[k];
+          if (v !== undefined && v !== null && v !== '' && v !== 'NA') return v;
+        }
+      }
+
+      return '';
+    }
+
     function normalizeClassCode(className) {
       if (!className) return '';
       const s = className.toString().trim().toUpperCase().replace(/CLASS/g, '').replace(/[\s_-]/g, '');
@@ -887,15 +962,57 @@
       },
       {
         empId: 'EMP-003',
-        fullName: 'Mr. K. Ramesh (Accountant)',
-        username: 'accountant',
+        fullName: 'Mr. Aktharpasha (Accountant)',
+        username: 'akthar',
         password: 'admin123',
         passwordHash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',
-        mobile: '+91 9121833703',
+        mobile: '+91 9121833702',
         email: 'accounts@stvenushighschool.edu.in',
         role: 'accountant',
         status: 'Active',
         timing: '8:30 AM – 4:30 PM',
+        createdAt: '10-Jun-2026 09:00 AM',
+        lastLogin: 'Never'
+      },
+      {
+        empId: 'EMP-003-ALT',
+        fullName: 'Mr. K. Ramesh (Accountant)',
+        username: 'accountant',
+        password: 'admin123',
+        passwordHash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',
+        mobile: '+91 98490 20003',
+        email: 'accounts@stvenushighschool.edu.in',
+        role: 'accountant',
+        status: 'Active',
+        timing: '8:30 AM – 4:30 PM',
+        createdAt: '10-Jun-2026 09:00 AM',
+        lastLogin: 'Never'
+      },
+      {
+        empId: 'EMP-004',
+        fullName: 'stvenus',
+        username: 'venus',
+        password: 'admin123',
+        passwordHash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',
+        mobile: '+91 9121833702',
+        email: 'correspondent@stvenushighschool.edu.in',
+        role: 'admin',
+        status: 'Active',
+        timing: '8:30 AM – 4:30 PM',
+        createdAt: '07-Sep-2026 09:38 AM',
+        lastLogin: 'Never'
+      },
+      {
+        empId: 'EMP-005',
+        fullName: 'Mrs. Sunitha Devi (Principal)',
+        username: 'principal',
+        password: 'admin123',
+        passwordHash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',
+        mobile: '+91 98490 20001',
+        email: 'principal@stvenushighschool.edu.in',
+        role: 'principal',
+        status: 'Active',
+        timing: '8:00 AM – 5:00 PM',
         createdAt: '10-Jun-2026 09:00 AM',
         lastLogin: 'Never'
       }
@@ -933,7 +1050,7 @@
         loaded = [INITIAL_USERS[0], ...loaded.filter(u => u.username !== 'shaikmadar786')];
       }
       return loaded.map(u => {
-        let plain = u.password || (u.username === 'shaikmadar786' ? 'Shaik@786' : 'admin123');
+        let plain = u.password || (u.username === 'shaikmadar786' ? 'Shaik@786' : (u.username === 'althaf' ? 'Althaf@786' : 'admin123'));
         return {
           ...u,
           password: plain,
@@ -1128,7 +1245,7 @@
       },
 
       async saveBulkStudents(studentsList) {
-        if (!Array.isArray(studentsList) || studentsList.length === 0) return;
+        if (!Array.isArray(studentsList) || studentsList.length === 0) return { success: true, count: 0 };
         try {
           const res = await this.authFetch(`${this.getBaseUrl()}/api/students`, {
             method: 'POST',
@@ -1136,10 +1253,17 @@
             body: JSON.stringify({ students: studentsList })
           });
           if (res.ok) {
+            const resData = await res.json().catch(() => ({ success: true }));
             studentsList.forEach(s => this.dirtyStudentIds.delete(s.id));
+            return { success: true, count: studentsList.length, data: resData };
+          } else {
+            const errData = await res.json().catch(() => ({}));
+            console.error('Bulk student sync returned error:', errData);
+            return { success: false, error: errData.error || ('Server returned ' + res.status) };
           }
         } catch (e) {
           console.warn('Failed to save students to database:', e.message);
+          return { success: false, error: e.message };
         }
       },
 
@@ -1176,7 +1300,40 @@
           if (studentsRes.ok) {
             const studentsJson = await studentsRes.json();
             if (studentsJson.success && Array.isArray(studentsJson.data) && studentsJson.data.length > 0) {
-              state.students = studentsJson.data;
+              const serverStudents = studentsJson.data;
+              if (this.dirtyStudentIds && this.dirtyStudentIds.size > 0) {
+                // Merge carefully: NEVER overwrite students currently being edited locally
+                const serverMap = new Map(serverStudents.map(s => [s.id, s]));
+                state.students = state.students.map(localS => {
+                  if (this.dirtyStudentIds.has(localS.id)) {
+                    return localS; // Keep dirty student in-memory
+                  }
+                  return serverMap.get(localS.id) || localS;
+                });
+                serverStudents.forEach(s => {
+                  if (!state.students.some(ls => ls.id === s.id)) {
+                    state.students.push(s);
+                  }
+                });
+              } else if (silent && state.activeTab === 'performance') {
+                // If user is currently viewing/editing marks on the performance tab, preserve entered term marks
+                const serverMap = new Map(serverStudents.map(s => [s.id, s]));
+                state.students = state.students.map(localS => {
+                  const serverS = serverMap.get(localS.id);
+                  if (!serverS) return localS;
+                  const localTerms = localS.termMarks || {};
+                  const serverTerms = serverS.termMarks || {};
+                  const mergedTerms = { ...serverTerms };
+                  for (const t in localTerms) {
+                    if (Object.keys(localTerms[t] || {}).length > 0) {
+                      mergedTerms[t] = { ...(serverTerms[t] || {}), ...(localTerms[t] || {}) };
+                    }
+                  }
+                  return { ...serverS, termMarks: mergedTerms };
+                });
+              } else {
+                state.students = serverStudents;
+              }
             }
           }
 
@@ -1250,8 +1407,10 @@
 
           // Only trigger full DOM re-render if user is NOT currently interacting with an open modal or input field
           const isUserActivelyTyping = document.activeElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
-          if (silent && (state.activeModal || isUserActivelyTyping)) {
-            // Background sync silent mode
+          const isMarksTabActive = state.activeTab === 'performance';
+          const hasDirtyEdits = this.dirtyStudentIds && this.dirtyStudentIds.size > 0;
+          if (silent && (state.activeModal || isUserActivelyTyping || isMarksTabActive || hasDirtyEdits)) {
+            // Background sync silent mode: never disrupt user while typing, viewing marks, or with dirty edits
           } else {
             render();
           }
@@ -1262,15 +1421,21 @@
       },
 
       async saveStudent(student) {
-        if (!student || !student.id) return;
+        if (!student || !student.id) return { success: false };
         try {
-          await this.authFetch(`${this.getBaseUrl()}/api/students`, {
+          const res = await this.authFetch(`${this.getBaseUrl()}/api/students`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ student })
           });
+          if (res.ok) {
+            this.dirtyStudentIds.delete(student.id);
+            return { success: true };
+          }
+          return { success: false };
         } catch (e) {
           console.warn('Failed to save student to database:', e.message);
+          return { success: false, error: e.message };
         }
       },
 
@@ -3257,7 +3422,7 @@
                 <div>
                   <label class="block text-slate-700 font-bold mb-1.5">Username <span class="text-rose-600">*</span></label>
                   <div class="relative">
-                    <input id="loginUsername" required placeholder="" autocomplete="username" autofocus class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-3 text-slate-900 font-bold text-xs focus:ring-2 focus:ring-sky-500 focus:bg-white focus:outline-none transition-all" />
+                    <input id="loginUsername" required value="${state.lastLoginUsername || ''}" placeholder="" autocomplete="username" autofocus class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-3 text-slate-900 font-bold text-xs focus:ring-2 focus:ring-sky-500 focus:bg-white focus:outline-none transition-all" />
                   </div>
                 </div>
 
@@ -3681,7 +3846,7 @@
                 <form onsubmit="handleLogin(event)" class="space-y-4 text-xs font-medium">
                   <div>
                     <label class="block text-slate-700 font-bold mb-1">Username <span class="text-rose-600">*</span></label>
-                    <input id="loginUsername" required placeholder="" autocomplete="username" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 font-bold text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none" />
+                    <input id="loginUsername" required value="${state.lastLoginUsername || ''}" placeholder="" autocomplete="username" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 font-bold text-xs focus:ring-2 focus:ring-sky-500 focus:outline-none" />
                   </div>
 
                   <div>
@@ -5504,7 +5669,7 @@
                               ${isLocked ? '🔓 Unlock Exam for Editing' : '🔒 Lock & Publish Results'}
                             </button>
                           ` : ''}
-                          <button onclick="saveClassExamMarks('${currentClass}', '${currentSec}', '${currentExam}')" ${!canEdit ? 'disabled' : ''} class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-xl text-xs font-black shadow-md active:scale-95 transition-all">
+                          <button id="btnSaveClassMarksTop" onclick="saveClassExamMarks('${currentClass}', '${currentSec}', '${currentExam}')" ${!canEdit ? 'disabled' : ''} class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-xl text-xs font-black shadow-md active:scale-95 transition-all">
                             💾 Save All Class Marks
                           </button>
                         </div>
@@ -5561,7 +5726,7 @@
                                 if (!isOpt) {
                                   maxTotal += (subObj.maxMarks || (currentExam.startsWith('FA') ? 20 : 100));
                                 }
-                                const val = marksData[subObj.name];
+                                const val = getStudentTermSubjectMark(marksData, subObj.name);
                                 if (val !== undefined && val !== null && val !== '' && val !== 'NA') {
                                   if (val === 'AB' || val === 'ML') {
                                     if (!isOpt) hasFail = true;
@@ -5596,7 +5761,7 @@
                                   ${subjectsDetailed.map(subObj => {
                                     const subName = subObj.name;
                                     const subMax = subObj.maxMarks || 100;
-                                    const rawVal = marksData[subName] !== undefined ? marksData[subName] : '';
+                                    const rawVal = getStudentTermSubjectMark(marksData, subName);
                                     return `
                                       <td class="py-1.5 px-2 text-center border-l border-slate-200">
                                         <input type="text" 
@@ -5680,7 +5845,7 @@
                           Showing <strong>${classStudents.length} student rows</strong> for examination <strong>${currentExam}</strong>.
                         </div>
                         <div class="flex space-x-2">
-                          <button onclick="saveClassExamMarks('${currentClass}', '${currentSec}', '${currentExam}')" ${!canEdit ? 'disabled' : ''} class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-6 py-2.5 rounded-xl text-xs font-black shadow-md">
+                          <button id="btnSaveClassMarksBottom" onclick="saveClassExamMarks('${currentClass}', '${currentSec}', '${currentExam}')" ${!canEdit ? 'disabled' : ''} class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white px-6 py-2.5 rounded-xl text-xs font-black shadow-md">
                             💾 Save All Class Marks
                           </button>
                         </div>
@@ -6430,7 +6595,7 @@
                             const cleanKey = subObj.name.replace(/\s+/g, '_');
                             const subMax = subObj.maxMarks || 20;
                             const rwps = getStudentSubjectRWPS(state.modalStudent, currentTerm, subObj.name) || {};
-                            const curTotal = currentMarks[subObj.name] !== undefined ? currentMarks[subObj.name] : '';
+                            const curTotal = getStudentTermSubjectMark(currentMarks, subObj.name);
 
                             return `
                               <tr class="hover:bg-white transition-colors">
@@ -6499,7 +6664,7 @@
                         return `
                           <div>
                             <label class="block text-slate-700 mb-1 font-bold">${subObj.name} <span class="text-[10px] text-slate-400 font-normal">(Max ${subObj.maxMarks})</span></label>
-                            <input type="text" id="sub_mark_${cleanKey}" value="${currentMarks[subObj.name] !== undefined ? currentMarks[subObj.name] : ''}" placeholder="0" class="w-full bg-slate-50 border rounded-xl px-3 py-1.5 font-bold text-slate-900 text-sm" />
+                            <input type="text" id="sub_mark_${cleanKey}" value="${getStudentTermSubjectMark(currentMarks, subObj.name)}" placeholder="0" class="w-full bg-slate-50 border rounded-xl px-3 py-1.5 font-bold text-slate-900 text-sm" />
                           </div>
                         `;
                       }).join('')}
@@ -10240,6 +10405,8 @@
       const u = uInp ? uInp.value.trim().toLowerCase() : '';
       const p = pInp ? pInp.value.trim() : '';
 
+      state.lastLoginUsername = u;
+
       if (!u || !p) {
         state.loginError = '⚠️ Please enter both username and password.';
         render();
@@ -10301,6 +10468,7 @@
         state.token = json.token;
         state.currentUser = json.user;
         state.loginError = '';
+        state.lastLoginUsername = '';
         state.viewMode = 'portal';
         localStorage.setItem('stv_auth_token', json.token);
         localStorage.setItem('stv_auth_user_v12', JSON.stringify(json.user));
@@ -11320,7 +11488,13 @@
         const inp = document.getElementById(`mark_input_${studentId}_${subObj.name.replace(/\s+/g, '_')}`);
         const v = inp ? inp.value.trim().toUpperCase() : '';
         if (v !== '' && v !== 'NA') {
-          student.termMarks[currentExam][subObj.name] = (v === 'AB' || v === 'ML') ? v : (parseFloat(v) || v);
+          const parsedVal = (v === 'AB' || v === 'ML') ? v : (parseFloat(v) || v);
+          student.termMarks[currentExam][subObj.name] = parsedVal;
+          // Synchronize canonical aliases to prevent key mismatches
+          if (subObj.name === 'Bio science') student.termMarks[currentExam]['Bio Science'] = parsedVal;
+          if (subObj.name === 'physical science') student.termMarks[currentExam]['Physical Science'] = parsedVal;
+          if (subObj.name === 'Mathematics') student.termMarks[currentExam]['Maths'] = parsedVal;
+          if (subObj.name === 'General English') student.termMarks[currentExam]['General English (Oral)'] = parsedVal;
           if (v === 'AB' || v === 'ML') {
             if (!isOpt) hasFail = true;
           } else {
@@ -11377,7 +11551,7 @@
       }
     }
 
-    function saveClassExamMarks(grade, section, examCode) {
+    async function saveClassExamMarks(grade, section, examCode) {
       const examKey = `${state.activeAcademicYear}_${examCode}_${grade}_${section}`;
       const examStatus = state.examStatuses[examKey] || 'Open';
       const isLocked = examStatus === 'Locked' || examStatus === 'Published';
@@ -11406,6 +11580,10 @@
               if (inp) {
                 const val = inp.value.trim().toUpperCase();
                 newExamMarks[subName] = val;
+                if (subName === 'Bio science') newExamMarks['Bio Science'] = val;
+                if (subName === 'physical science') newExamMarks['Physical Science'] = val;
+                if (subName === 'Mathematics') newExamMarks['Maths'] = val;
+                if (subName === 'General English') newExamMarks['General English (Oral)'] = val;
               }
             });
 
@@ -11447,6 +11625,10 @@
               if (inp) {
                 const val = inp.value.trim().toUpperCase();
                 newExamMarks[sub] = val;
+                if (sub === 'Bio science') newExamMarks['Bio Science'] = val;
+                if (sub === 'physical science') newExamMarks['Physical Science'] = val;
+                if (sub === 'Mathematics') newExamMarks['Maths'] = val;
+                if (sub === 'General English') newExamMarks['General English (Oral)'] = val;
               }
             });
 
@@ -11476,9 +11658,34 @@
       }
 
       const studentsToSync = state.students.filter(s => isSameClass(s.grade, grade) && (section === 'all' || isSameSection(s.section, section)));
-      CloudSync.saveBulkStudents(studentsToSync);
-      saveState();
-      showToast('Changes saved successfully.');
+      studentsToSync.forEach(s => CloudSync.dirtyStudentIds.add(s.id));
+
+      // Visual button loading state
+      const topBtn = document.getElementById('btnSaveClassMarksTop');
+      const bottomBtn = document.getElementById('btnSaveClassMarksBottom');
+      const origTopText = topBtn ? topBtn.innerHTML : '';
+      const origBottomText = bottomBtn ? bottomBtn.innerHTML : '';
+
+      if (topBtn) { topBtn.disabled = true; topBtn.innerHTML = '⏳ Saving & Syncing to Cloud...'; }
+      if (bottomBtn) { bottomBtn.disabled = true; bottomBtn.innerHTML = '⏳ Saving & Syncing to Cloud...'; }
+
+      try {
+        const syncRes = await CloudSync.saveBulkStudents(studentsToSync);
+        if (syncRes && syncRes.success) {
+          studentsToSync.forEach(s => CloudSync.dirtyStudentIds.delete(s.id));
+          saveState();
+          showToast(`✅ Successfully saved & synced ${examCode} marks for ${updatedCount} students to cloud database!`);
+        } else {
+          alert('⚠️ Cloud Sync Notice: Marks were saved locally, but database sync returned: ' + (syncRes?.error || 'Unknown status') + '. Please verify your internet connection.');
+          saveState();
+        }
+      } catch (err) {
+        console.error('Error during saveClassExamMarks:', err);
+        alert('⚠️ Error saving marks to database: ' + err.message);
+      } finally {
+        if (topBtn) { topBtn.disabled = false; topBtn.innerHTML = origTopText || '💾 Save All Class Marks'; }
+        if (bottomBtn) { bottomBtn.disabled = false; bottomBtn.innerHTML = origBottomText || '💾 Save All Class Marks'; }
+      }
     }
 
     function updateStudentTeacherRemarks(studentId, examCode, remarksText) {
@@ -11857,7 +12064,7 @@
     }
 
     // MODAL SUBMIT HANDLERS
-    function saveStudentMarks(e) {
+    async function saveStudentMarks(e) {
       e.preventDefault();
       if (!state.modalStudent) return;
       const term = document.getElementById('examTermInput').value;
@@ -11911,6 +12118,10 @@
             newTermMarks[subName] = totalVal;
           }
         }
+        if (subName === 'Bio science') newTermMarks['Bio Science'] = newTermMarks[subName];
+        if (subName === 'physical science') newTermMarks['Physical Science'] = newTermMarks[subName];
+        if (subName === 'Mathematics') newTermMarks['Maths'] = newTermMarks[subName];
+        if (subName === 'General English') newTermMarks['General English (Oral)'] = newTermMarks[subName];
       });
 
       if (isHighSchool && Object.keys(rwpsData).length > 0) {
@@ -11928,7 +12139,12 @@
       });
 
       if (updatedStudentRecord) {
-        CloudSync.saveStudentMarks(updatedStudentRecord.id, term, newTermMarks, updatedStudentRecord);
+        CloudSync.dirtyStudentIds.add(updatedStudentRecord.id);
+        await Promise.allSettled([
+          CloudSync.saveStudent(updatedStudentRecord),
+          CloudSync.saveStudentMarks(updatedStudentRecord.id, term, newTermMarks, updatedStudentRecord)
+        ]);
+        CloudSync.dirtyStudentIds.delete(updatedStudentRecord.id);
       }
       saveState();
       closeModal();

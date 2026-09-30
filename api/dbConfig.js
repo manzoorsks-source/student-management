@@ -1,7 +1,7 @@
 const { Client } = require('pg');
 
-// Active Neon Serverless PostgreSQL Database (Free Tier)
-const NEON_DEFAULT_URL = 'postgresql://neondb_owner:npg_3KNqCFdAocp0@ep-bold-shadow-b4mjmqf1.c-6.us-east-2.aws.neon.tech:5432/neondb';
+// Active Neon Serverless PostgreSQL Database (Free Tier - Connection Pooled for Serverless / Vercel)
+const NEON_DEFAULT_URL = 'postgresql://neondb_owner:npg_3KNqCFdAocp0@ep-bold-shadow-b4mjmqf1-pooler.c-6.us-east-2.aws.neon.tech:5432/neondb?sslmode=require';
 
 function getConnectionString() {
   const envUrl = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL || process.env.AIVEN_DATABASE_URL || '';
@@ -9,7 +9,7 @@ function getConnectionString() {
   if (!envUrl || envUrl.includes('aivencloud.com')) {
     return NEON_DEFAULT_URL;
   }
-  return envUrl.split('?')[0];
+  return envUrl;
 }
 
 function getClient() {
@@ -17,7 +17,8 @@ function getClient() {
   if (!connectionString) return null;
   return new Client({
     connectionString,
-    ssl: { rejectUnauthorized: false }
+    ssl: { rejectUnauthorized: false },
+    connectionTimeoutMillis: 15000
   });
 }
 

@@ -9,87 +9,117 @@ if (!process.env.DATABASE_URL && !process.env.AIVEN_DATABASE_URL) {
 
 const { getClient } = require('./dbConfig');
 
-function cleanUsersArray(users, isSuperAdmin = false) {
-  if (!Array.isArray(users)) return users;
+const OFFICIAL_DEFAULT_USERS = [
+  {
+    empId: 'EMP-001',
+    fullName: 'Shaik Madar (Admin / Correspondent)',
+    username: 'shaikmadar786',
+    password: 'Shaik@786',
+    passwordHash: '9d5752ada6cd123fc7905ec6c4e89af4b4e8de924668fb33853ee1da394594f4',
+    mobile: '+91 9121833702',
+    email: 'correspondent@stvenushighschool.edu.in',
+    role: 'super_admin',
+    status: 'Active',
+    timing: '8:30 AM – 4:30 PM',
+    createdAt: '10-Jun-2026 09:00 AM',
+    lastLogin: 'Never'
+  },
+  {
+    empId: 'EMP-002',
+    fullName: 'Mr. Mohd Althaf (Super Admin 2)',
+    username: 'althaf',
+    password: 'Althaf@786',
+    passwordHash: '0b0c14407c7c87e7135a72b3af444a2a2d7fee70d585aa61d07b4767c6f75426',
+    mobile: '+91 7659000786',
+    email: 'principal@stvenushighschool.edu.in',
+    role: 'super_admin',
+    status: 'Active',
+    timing: '8:00 AM – 5:00 PM',
+    createdAt: '10-Jun-2026 09:00 AM',
+    lastLogin: 'Never'
+  },
+  {
+    empId: 'EMP-003',
+    fullName: 'Mr. Aktharpasha (Accountant)',
+    username: 'akthar',
+    password: 'admin123',
+    passwordHash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',
+    mobile: '+91 9121833702',
+    email: 'accounts@stvenushighschool.edu.in',
+    role: 'accountant',
+    status: 'Active',
+    timing: '8:30 AM – 4:30 PM',
+    createdAt: '10-Jun-2026 09:00 AM',
+    lastLogin: 'Never'
+  },
+  {
+    empId: 'EMP-003-ALT',
+    fullName: 'Mr. K. Ramesh (Accountant)',
+    username: 'accountant',
+    password: 'admin123',
+    passwordHash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',
+    mobile: '+91 98490 20003',
+    email: 'accounts@stvenushighschool.edu.in',
+    role: 'accountant',
+    status: 'Active',
+    timing: '8:30 AM – 4:30 PM',
+    createdAt: '10-Jun-2026 09:00 AM',
+    lastLogin: 'Never'
+  },
+  {
+    empId: 'EMP-004',
+    fullName: 'stvenus',
+    username: 'venus',
+    password: 'admin123',
+    passwordHash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',
+    mobile: '+91 9121833702',
+    email: 'correspondent@stvenushighschool.edu.in',
+    role: 'admin',
+    status: 'Active',
+    timing: '8:30 AM – 4:30 PM',
+    createdAt: '07-Sep-2026 09:38 AM',
+    lastLogin: 'Never'
+  },
+  {
+    empId: 'EMP-005',
+    fullName: 'Mrs. Sunitha Devi (Principal)',
+    username: 'principal',
+    password: 'admin123',
+    passwordHash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',
+    mobile: '+91 98490 20001',
+    email: 'principal@stvenushighschool.edu.in',
+    role: 'principal',
+    status: 'Active',
+    timing: '8:00 AM – 5:00 PM',
+    createdAt: '10-Jun-2026 09:00 AM',
+    lastLogin: 'Never'
+  }
+];
+
+function cleanUsersArray(users) {
+  if (!Array.isArray(users) || users.length === 0) {
+    return OFFICIAL_DEFAULT_USERS;
+  }
+  const seenUsernames = new Set();
   let filtered = users.filter(u => {
     if (!u) return false;
     const usr = (u.username || '').toLowerCase().trim();
+    const fn = (u.fullName || '').toLowerCase().trim();
     if (usr === 'correspondent' || usr === 'testing' || usr === 'test') return false;
-    if (fn.includes('test') || fn.includes('mock')) return false;
+    if (fn.includes('demo administrator') || fn.includes('sunita sharma') || fn.includes('rajesh verma') || fn.includes('priya patel') || usr === 'teacher') {
+      return false;
+    }
+    if (seenUsernames.has(usr)) return false;
+    seenUsernames.add(usr);
     return true;
   });
 
-  const hasAdmin = filtered.some(u => (u.username || '').toLowerCase() === 'admin');
-  if (!hasAdmin) {
-    filtered.unshift({
-      empId: 'EMP-001',
-      fullName: 'Demo Administrator (Correspondent)',
-      username: 'admin',
-      password: 'demo123',
-      passwordHash: 'd3ad9315b7be5dd53b31a273b3b3aba5defe700808305aa16a3062b76658a791',
-      mobile: '+91 98765 43210',
-      email: 'admin@demoschool.edu',
-      role: 'super_admin',
-      status: 'Active',
-      timing: '8:30 AM – 4:30 PM',
-      createdAt: '10-Jun-2026 09:00 AM',
-      lastLogin: 'Never'
-    });
-  }
-
-  const hasPrincipal = filtered.some(u => (u.username || '').toLowerCase() === 'principal' || u.role === 'principal');
-  if (!hasPrincipal) {
-    filtered.push({
-      empId: 'EMP-002',
-      fullName: 'Dr. Sunita Sharma (Principal)',
-      username: 'principal',
-      password: 'demo123',
-      passwordHash: 'd3ad9315b7be5dd53b31a273b3b3aba5defe700808305aa16a3062b76658a791',
-      mobile: '+91 98765 43211',
-      email: 'principal@demoschool.edu',
-      role: 'principal',
-      status: 'Active',
-      timing: '8:00 AM – 5:00 PM',
-      createdAt: '10-Jun-2026 09:00 AM',
-      lastLogin: 'Never'
-    });
-  }
-
-  const hasAccountant = filtered.some(u => (u.username || '').toLowerCase() === 'accountant' || u.role === 'accountant');
-  if (!hasAccountant) {
-    filtered.push({
-      empId: 'EMP-003',
-      fullName: 'Mr. Rajesh Verma (Accountant)',
-      username: 'accountant',
-      password: 'demo123',
-      passwordHash: 'd3ad9315b7be5dd53b31a273b3b3aba5defe700808305aa16a3062b76658a791',
-      mobile: '+91 98765 43212',
-      email: 'accounts@demoschool.edu',
-      role: 'accountant',
-      status: 'Active',
-      timing: '8:30 AM – 4:30 PM',
-      createdAt: '10-Jun-2026 09:00 AM',
-      lastLogin: 'Never'
-    });
-  }
-
-  const hasTeacher = filtered.some(u => (u.username || '').toLowerCase() === 'teacher' || u.role === 'teacher');
-  if (!hasTeacher) {
-    filtered.push({
-      empId: 'EMP-004',
-      fullName: 'Mrs. Priya Patel (Senior Faculty)',
-      username: 'teacher',
-      password: 'demo123',
-      passwordHash: 'd3ad9315b7be5dd53b31a273b3b3aba5defe700808305aa16a3062b76658a791',
-      mobile: '+91 98765 43213',
-      email: 'teacher@demoschool.edu',
-      role: 'teacher',
-      status: 'Active',
-      timing: '8:30 AM – 4:00 PM',
-      createdAt: '10-Jun-2026 09:00 AM',
-      lastLogin: 'Never'
-    });
-  }
+  OFFICIAL_DEFAULT_USERS.forEach(defUser => {
+    if (!seenUsernames.has(defUser.username.toLowerCase())) {
+      filtered.push(defUser);
+      seenUsernames.add(defUser.username.toLowerCase());
+    }
+  });
 
   return filtered;
 }
@@ -152,13 +182,8 @@ module.exports = async (req, res) => {
       }
 
       // Ensure users key exists
-      if (!stateObj.users) {
-        stateObj.users = cleanUsersArray([]);
-      }
-
-      // Ensure website key never returns legacy school data
-      if (stateObj.website && (typeof stateObj.website !== 'object' || /venus/i.test(JSON.stringify(stateObj.website)))) {
-        delete stateObj.website;
+      if (!stateObj.users || !Array.isArray(stateObj.users) || stateObj.users.length === 0) {
+        stateObj.users = OFFICIAL_DEFAULT_USERS;
       }
 
       return res.status(200).json({

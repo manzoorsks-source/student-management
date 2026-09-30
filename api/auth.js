@@ -79,6 +79,19 @@ const SEED_USERS = [
     status: 'Active',
     timing: '8:30 AM – 4:30 PM',
     createdAt: '07-Sep-2026 09:38 AM'
+  },
+  {
+    empId: 'EMP-005',
+    fullName: 'Mrs. Sunitha Devi (Principal)',
+    username: 'principal',
+    password: 'admin123',
+    passwordHash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',
+    mobile: '+91 98490 20001',
+    email: 'principal@stvenushighschool.edu.in',
+    role: 'principal',
+    status: 'Active',
+    timing: '8:00 AM – 5:00 PM',
+    createdAt: '10-Jun-2026 09:00 AM'
   }
 ];
 
