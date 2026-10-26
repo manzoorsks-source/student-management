@@ -246,116 +246,561 @@
     ];
 
     const DEFAULT_CLASS_SUBJECTS = {
-      'Nursery': [
-        { name: 'English (Oral)', shortName: 'ENG(O)', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'English (writing)', shortName: 'ENG(W)', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Number Work (oral)', shortName: 'NUM(O)', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Number work (writing)', shortName: 'NUM(W)', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Rhymes', shortName: 'RHY', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Social / G K', shortName: 'SOC/GK', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Drawing', shortName: 'DRW', maxMarks: 100, passMarks: 35, type: 'Activity', isOptional: true }
+      "Nursery": [
+            {
+                  "name": "English (Oral)",
+                  "shortName": "ENG(O)",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "English (writing)",
+                  "shortName": "ENG(W)",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Number Work",
+                  "shortName": "NUM",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Rhymes",
+                  "shortName": "RHY",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Social / G K",
+                  "shortName": "SOC/GK",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Drawing",
+                  "shortName": "DRW",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Activity",
+                  "isOptional": true
+            }
       ],
-      'LKG': [
-        { name: 'Hindi', shortName: 'HIN', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'English', shortName: 'ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'EVS', shortName: 'EVS', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'General English (Oral)', shortName: 'G.ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Rhymes (Oral)', shortName: 'RHY', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Drawing', shortName: 'DRW', maxMarks: 100, passMarks: 35, type: 'Activity', isOptional: true }
+      "LKG": [
+            {
+                  "name": "Hindi",
+                  "shortName": "HIN",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "English",
+                  "shortName": "ENG",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Mathematics",
+                  "shortName": "MAT",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "EVS",
+                  "shortName": "EVS",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Rhymes (Oral)",
+                  "shortName": "RHY",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Drawing",
+                  "shortName": "DRW",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Activity",
+                  "isOptional": true
+            }
       ],
-      'UKG': [
-        { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Hindi', shortName: 'HIN', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'English', shortName: 'ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'EVS', shortName: 'EVS', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'General English', shortName: 'G.ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Drawing', shortName: 'DRW', maxMarks: 100, passMarks: 35, type: 'Activity', isOptional: true }
+      "UKG": [
+            {
+                  "name": "Telugu",
+                  "shortName": "TEL",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Hindi",
+                  "shortName": "HIN",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "English",
+                  "shortName": "ENG",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Mathematics",
+                  "shortName": "MAT",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "EVS",
+                  "shortName": "EVS",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Drawing",
+                  "shortName": "DRW",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Activity",
+                  "isOptional": true
+            }
       ],
-      '1st Class': [
-        { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Hindi', shortName: 'HIN', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'English', shortName: 'ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'EVS', shortName: 'EVS', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'General English', shortName: 'G.ENG', maxMarks: 100, passMarks: 35, type: 'Core' }
+      "1st Class": [
+            {
+                  "name": "Telugu",
+                  "shortName": "TEL",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Hindi",
+                  "shortName": "HIN",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "English",
+                  "shortName": "ENG",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Mathematics",
+                  "shortName": "MAT",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "EVS",
+                  "shortName": "EVS",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            }
       ],
-      '2nd Class': [
-        { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Hindi', shortName: 'HIN', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'English', shortName: 'ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'EVS', shortName: 'EVS', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'General English', shortName: 'G.ENG', maxMarks: 100, passMarks: 35, type: 'Core' }
+      "2nd Class": [
+            {
+                  "name": "Telugu",
+                  "shortName": "TEL",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Hindi",
+                  "shortName": "HIN",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "English",
+                  "shortName": "ENG",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Mathematics",
+                  "shortName": "MAT",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "EVS",
+                  "shortName": "EVS",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            }
       ],
-      '3rd Class': [
-        { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Hindi', shortName: 'HIN', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'English', shortName: 'ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'EVS', shortName: 'EVS', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'General English', shortName: 'G.ENG', maxMarks: 100, passMarks: 35, type: 'Core' }
+      "3rd Class": [
+            {
+                  "name": "Telugu",
+                  "shortName": "TEL",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Hindi",
+                  "shortName": "HIN",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "English",
+                  "shortName": "ENG",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Mathematics",
+                  "shortName": "MAT",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "EVS",
+                  "shortName": "EVS",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            }
       ],
-      '4th Class': [
-        { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Hindi', shortName: 'HIN', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'English', shortName: 'ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'EVS', shortName: 'EVS', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'General English', shortName: 'G.ENG', maxMarks: 100, passMarks: 35, type: 'Core' }
+      "4th Class": [
+            {
+                  "name": "Telugu",
+                  "shortName": "TEL",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Hindi",
+                  "shortName": "HIN",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "English",
+                  "shortName": "ENG",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Mathematics",
+                  "shortName": "MAT",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "EVS",
+                  "shortName": "EVS",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            }
       ],
-      '5th Class': [
-        { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Hindi', shortName: 'HIN', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'English', shortName: 'ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'EVS', shortName: 'EVS', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'General English', shortName: 'G.ENG', maxMarks: 100, passMarks: 35, type: 'Core' }
+      "5th Class": [
+            {
+                  "name": "Telugu",
+                  "shortName": "TEL",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Hindi",
+                  "shortName": "HIN",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "English",
+                  "shortName": "ENG",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Mathematics",
+                  "shortName": "MAT",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "EVS",
+                  "shortName": "EVS",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            }
       ],
-      '6th Class': [
-        { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Hindi', shortName: 'HIN', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'English', shortName: 'ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Science', shortName: 'SCI', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Social', shortName: 'SOC', maxMarks: 100, passMarks: 35, type: 'Core' }
+      "6th Class": [
+            {
+                  "name": "Telugu",
+                  "shortName": "TEL",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Hindi",
+                  "shortName": "HIN",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "English",
+                  "shortName": "ENG",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Mathematics",
+                  "shortName": "MAT",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Science",
+                  "shortName": "SCI",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Social",
+                  "shortName": "SOC",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            }
       ],
-      '7th Class': [
-        { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Hindi', shortName: 'HIN', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'English', shortName: 'ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Science', shortName: 'SCI', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Social', shortName: 'SOC', maxMarks: 100, passMarks: 35, type: 'Core' }
+      "7th Class": [
+            {
+                  "name": "Telugu",
+                  "shortName": "TEL",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Hindi",
+                  "shortName": "HIN",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "English",
+                  "shortName": "ENG",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Mathematics",
+                  "shortName": "MAT",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Science",
+                  "shortName": "SCI",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Social",
+                  "shortName": "SOC",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            }
       ],
-      '8th Class': [
-        { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Hindi', shortName: 'HIN', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'English', shortName: 'ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Science', shortName: 'SCI', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Social', shortName: 'SOC', maxMarks: 100, passMarks: 35, type: 'Core' }
+      "8th Class": [
+            {
+                  "name": "Telugu",
+                  "shortName": "TEL",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Hindi",
+                  "shortName": "HIN",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "English",
+                  "shortName": "ENG",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Mathematics",
+                  "shortName": "MAT",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Science",
+                  "shortName": "SCI",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Social",
+                  "shortName": "SOC",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            }
       ],
-      '9th Class': [
-        { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Hindi', shortName: 'HIN', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'English', shortName: 'ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Bio science', shortName: 'B.S', maxMarks: 50, passMarks: 18, type: 'Core' },
-        { name: 'physical science', shortName: 'P.S', maxMarks: 50, passMarks: 18, type: 'Core' },
-        { name: 'Social', shortName: 'SOC', maxMarks: 100, passMarks: 35, type: 'Core' }
+      "9th Class": [
+            {
+                  "name": "Telugu",
+                  "shortName": "TEL",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Hindi",
+                  "shortName": "HIN",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "English",
+                  "shortName": "ENG",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Mathematics",
+                  "shortName": "MAT",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Bio science",
+                  "shortName": "B.S",
+                  "maxMarks": 50,
+                  "passMarks": 18,
+                  "type": "Core"
+            },
+            {
+                  "name": "physical science",
+                  "shortName": "P.S",
+                  "maxMarks": 50,
+                  "passMarks": 18,
+                  "type": "Core"
+            },
+            {
+                  "name": "Social",
+                  "shortName": "SOC",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            }
       ],
-      '10th Class': [
-        { name: 'Telugu', shortName: 'TEL', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Hindi', shortName: 'HIN', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'English', shortName: 'ENG', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Mathematics', shortName: 'MAT', maxMarks: 100, passMarks: 35, type: 'Core' },
-        { name: 'Bio science', shortName: 'B.S', maxMarks: 50, passMarks: 18, type: 'Core' },
-        { name: 'physical science', shortName: 'P.S', maxMarks: 50, passMarks: 18, type: 'Core' },
-        { name: 'Social', shortName: 'SOC', maxMarks: 100, passMarks: 35, type: 'Core' }
+      "10th Class": [
+            {
+                  "name": "Telugu",
+                  "shortName": "TEL",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Hindi",
+                  "shortName": "HIN",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "English",
+                  "shortName": "ENG",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Mathematics",
+                  "shortName": "MAT",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            },
+            {
+                  "name": "Bio science",
+                  "shortName": "B.S",
+                  "maxMarks": 50,
+                  "passMarks": 18,
+                  "type": "Core"
+            },
+            {
+                  "name": "physical science",
+                  "shortName": "P.S",
+                  "maxMarks": 50,
+                  "passMarks": 18,
+                  "type": "Core"
+            },
+            {
+                  "name": "Social",
+                  "shortName": "SOC",
+                  "maxMarks": 100,
+                  "passMarks": 35,
+                  "type": "Core"
+            }
       ]
-    };
+};
 
     const DEFAULT_GRADE_RULES = [
       { minPct: 90, maxPct: 100, grade: 'A+', gpa: 10, desc: 'Outstanding' },
@@ -1109,7 +1554,7 @@
     };
 
     // PERMANENT STORAGE GUARANTEE - NEVER WIPE USER DATA ON REFRESH OR LOGOUT
-    const APP_VERSION = 'stv_v2026_section_c_fix_v12';
+    const APP_VERSION = 'stv_v2026_primary_5subjects_exact_v2';
     try {
       localStorage.setItem('stv_app_version', APP_VERSION);
     } catch(e) {}
@@ -1598,7 +2043,7 @@
       localStorage.setItem('stv_academic_history_v11', JSON.stringify(state.academicHistory));
       localStorage.setItem('stv_students_v11', JSON.stringify(state.students));
       localStorage.setItem('stv_fee_structure_v1', JSON.stringify(state.classFeeStructure));
-      localStorage.setItem('stv_class_subjects_v105', JSON.stringify(state.classSubjectsMap));
+      localStorage.setItem('stv_class_subjects_v106', JSON.stringify(state.classSubjectsMap));
       localStorage.setItem('stv_exams_v105', JSON.stringify(state.examsList));
       localStorage.setItem('stv_grade_rules_v1', JSON.stringify(state.gradeRules));
       localStorage.setItem('stv_exam_statuses_v1', JSON.stringify(state.examStatuses));
